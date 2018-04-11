@@ -42,16 +42,17 @@ def generate_table(df, max_rows=10):
             )
 
 @app.callback(
-        dash.dependencies.Output('text-content', 'children'),
+        dash.dependencies.Output('table-content', 'children'),
         [dash.dependencies.Input('event-selection','value'),
          dash.dependencies.Input('gender-selection','value')])
-def select_index(selected_event, selected_gender):
+def update_table(selected_event, selected_gender):
     print(selected_event)
     print(selected_gender)
-    text = pd.DataFrame(df[df['Event']==selected_event])
-    text = pd.DataFrame(df[df['Gender']==selected_gender])
-    text = text.sort_values('Time Full', ascending=True)
-    return generate_table(text)
+    filtered_df = pd.DataFrame(df[df['Event']==selected_event])
+    filtered_df = pd.DataFrame(filtered_df[filtered_df['Gender']==selected_gender])
+    filtered_df = filtered_df.sort_values('Time Full', ascending=True)
+    print(filtered_df.head())
+    return generate_table(filtered_df)
     
 app.layout = html.Div([
         html.Label('Event Select'),
@@ -67,43 +68,11 @@ app.layout = html.Div([
                 value=gender[0]
                 ),
         html.Div([
-                html.Div(id='text-content')],
+                html.Div(id='table-content')],
                 style={
                         'font-size':'12px'
                         })
         ])
-
-
-    
-
-
-
-
-#@app.callback(dash.dependencies.Output('page-content', 'children'),
-#              [dash.dependencies.Input('url', 'pathname')])
-
-#app.layout = html.Div([
-#        #html.H4('Swimming App'),
-#        dcc.Graph(id='Swimming Data'),
-#        dcc.Slider(
-#                id='year-slider',
-#                min=df['Year'].min(),
-#                max=df['Year'].max(),
-#                value=df['Year'].min(),
-#                step=None,
-#                marks={str(year): str(year) for year in df['Year'].unique()}
-#                )
-#        #generate_table(df)
-#        ])
-
-#@app.callback(
-#        dash.dependencies.Output('Swimming Data', 'figure'),
-#        [dash.dependencies.Input('year-slider', 'value')])
-#
-#def update_figure(selected_year):
-#    filtered_df = df[df.year == selected_year]
-#    traces = []
-#    for i in filtered_df.cont 
 
 if __name__ == '__main__':
     app.run_server(debug=True)
