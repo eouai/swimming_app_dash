@@ -33,6 +33,49 @@ gender = [{'label': 'M', 'value': 'M'},
 performer = [{'label': 'Top Performances', 'value': 'Performances'},
              {'label': 'Top Performers', 'value': 'Performers'}]
 
+css = [
+       'https://cdn.rawgit.com/plotly/dash-app-stylesheets/8485c028c19c393e9ab85e1a4fafd78c489609c2/dash-docs-base.css',
+       'https://gonts.googleapis.com/css?family=Dosis',
+       'https://dcnjs.cloudflare.com/ajax.libs/font-awesome/4.7.0/css/font-awesome.min.css'
+       ]
+#        'https://cdn.rawgit.com/plotly/dash-app-stylesheets/30b641e2e89753b13e6557b9d65649f13ea7c64c/dash-docs-custom.css',
+
+app.layout = html.Div([
+        dcc.Location(id='url', refresh=False),
+        html.Div(id='page-content')
+        ]) 
+ 
+index_page = html.Div([
+        html.A([
+                dcc.Link('Reports', href='/page-1')
+                ])])
+
+page_1_layout = html.Div([
+        html.Label('Event Select'),
+        dcc.Dropdown(
+                id='event-selection',
+                options = events,
+                value='' #events[2]
+                ),
+        html.Label('Gender Select'),
+        dcc.Dropdown(
+                id='gender-selection',
+                options = gender,
+                value='' #gender[0]
+                ),
+        html.Label('Performance Select'),
+        dcc.Dropdown(
+                id='performer-selection',
+                options = performer,
+                value='' #performer[0]
+                ),
+        html.Div([
+                html.Div(id='table-content')],
+                style={
+                        'font-size':'12px'
+                        })
+        ])
+  
 def generate_table(df, max_rows=10):
     return html.Table(
             #header
@@ -44,41 +87,6 @@ def generate_table(df, max_rows=10):
             ]) for i in range(min(len(df), max_rows))]            
             )
 
-app.layout = html.Div([
-        dcc.Location(id='url', refresh=False),
-        html.Div(id='page-content')
-        ]) 
- 
-index_page = html.Div([
-        html.A([
-                dcc.Link('Reports', href='/page-1')
-                ])])
-page_1_layout = html.Div([
-        html.Label('Event Select'),
-        dcc.Dropdown(
-                id='event-selection',
-                options = events,
-                value=events[2]
-                ),
-        html.Label('Gender Select'),
-        dcc.Dropdown(
-                id='gender-selection',
-                options = gender,
-                value=gender[0]
-                ),
-        html.Label('Performance Select'),
-        dcc.Dropdown(
-                id='performer-selection',
-                options = performer,
-                value=performer[0]
-                ),
-        html.Div([
-                html.Div(id='table-content')],
-                style={
-                        'font-size':'12px'
-                        })
-        ])
-    
 @app.callback(
         dash.dependencies.Output('table-content', 'children'),
         [dash.dependencies.Input('event-selection','value'),
@@ -97,11 +105,16 @@ def update_table(selected_event, selected_gender, selected_performance):
 @app.callback(dash.dependencies.Output('page-content', 'children'),
               [dash.dependencies.Input('url', 'pathname')])
 def display_page(pathname):
+    if pathname is None:
+        return ''
+    if pathname.endswith('/') and pathname != '/':
+        pathname = pathname[:len(pathname) - 1]
     if pathname == '/page-1':
         return page_1_layout
     else:
         return index_page
 
+app.css.append_css({'external_url': css})
 
 if __name__ == '__main__':
     app.run_server(debug=True)
