@@ -7,6 +7,7 @@ Created on Tue Apr 10 17:15:48 2018
 """
 
 import dash
+import flask
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table_experiments as dt
@@ -15,7 +16,9 @@ import pandas as pd
 import plotly.graph_objs as go
 
 
-app = dash.Dash()
+server = flask.Flask(__name__)
+app = dash.Dash(__name__, server=server)
+
 df_raw = pd.read_csv('swimming_data.csv')
 df_raw['Year'] = pd.DatetimeIndex(df_raw['Date']).year
 df = df_raw[['Event', 'Time Full', 'Year', 'Swimmer', 'Gender']]
@@ -29,6 +32,8 @@ for event in unique_events:
 gender = [{'label': 'M', 'value': 'M'},
           {'label': 'F', 'value': 'F'}
         ]
+performer = [{'label': 'Top Performances', 'value': 'Performances'},
+             {'label': 'Top Performers', 'value': 'Performers'}]
 
 def generate_table(df, max_rows=10):
     return html.Table(
@@ -44,14 +49,16 @@ def generate_table(df, max_rows=10):
 @app.callback(
         dash.dependencies.Output('table-content', 'children'),
         [dash.dependencies.Input('event-selection','value'),
-         dash.dependencies.Input('gender-selection','value')])
-def update_table(selected_event, selected_gender):
-    print(selected_event)
-    print(selected_gender)
+         dash.dependencies.Input('gender-selection','value'),
+         dash.dependencies.Input('performer-selection', 'value')])
+def update_table(selected_event, selected_gender, selected_performance):
     filtered_df = pd.DataFrame(df[df['Event']==selected_event])
     filtered_df = pd.DataFrame(filtered_df[filtered_df['Gender']==selected_gender])
     filtered_df = filtered_df.sort_values('Time Full', ascending=True)
-    print(filtered_df.head())
+    if selected_performance == "Performers":
+        filtered_df = filtered_df.groupby(('Event','Gender','Swimmer')).first()
+        filtered_df = filtered_df.reset_index()
+        filtered_df = filtered_df.sort_values(by='Time Full')
     return generate_table(filtered_df)
     
 app.layout = html.Div([
@@ -66,6 +73,12 @@ app.layout = html.Div([
                 id='gender-selection',
                 options = gender,
                 value=gender[0]
+                ),
+        html.Label('Performance Select'),
+        dcc.Dropdown(
+                id='performer-selection',
+                options = performer,
+                value=performer[0]
                 ),
         html.Div([
                 html.Div(id='table-content')],
