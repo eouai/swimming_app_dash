@@ -7,7 +7,6 @@ Created on Tue Apr 10 17:15:48 2018
 """
 
 import dash
-import flask
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table_experiments as dt
@@ -16,8 +15,7 @@ import pandas as pd
 import plotly.graph_objs as go
 
 
-server = flask.Flask(__name__)
-app = dash.Dash(__name__, server=server)
+app = dash.Dash()
 
 df_raw = pd.read_csv('swimming_data.csv')
 df_raw['Year'] = pd.DatetimeIndex(df_raw['Date']).year
@@ -46,22 +44,16 @@ def generate_table(df, max_rows=10):
             ]) for i in range(min(len(df), max_rows))]            
             )
 
-@app.callback(
-        dash.dependencies.Output('table-content', 'children'),
-        [dash.dependencies.Input('event-selection','value'),
-         dash.dependencies.Input('gender-selection','value'),
-         dash.dependencies.Input('performer-selection', 'value')])
-def update_table(selected_event, selected_gender, selected_performance):
-    filtered_df = pd.DataFrame(df[df['Event']==selected_event])
-    filtered_df = pd.DataFrame(filtered_df[filtered_df['Gender']==selected_gender])
-    filtered_df = filtered_df.sort_values('Time Full', ascending=True)
-    if selected_performance == "Performers":
-        filtered_df = filtered_df.groupby(('Event','Gender','Swimmer')).first()
-        filtered_df = filtered_df.reset_index()
-        filtered_df = filtered_df.sort_values(by='Time Full')
-    return generate_table(filtered_df)
-    
 app.layout = html.Div([
+        dcc.Location(id='url', refresh=False),
+        html.Div(id='page-content')
+        ]) 
+ 
+index_page = html.Div([
+        html.A([
+                dcc.Link('Reports', href='/page-1')
+                ])])
+page_1_layout = html.Div([
         html.Label('Event Select'),
         dcc.Dropdown(
                 id='event-selection',
@@ -86,6 +78,30 @@ app.layout = html.Div([
                         'font-size':'12px'
                         })
         ])
+    
+@app.callback(
+        dash.dependencies.Output('table-content', 'children'),
+        [dash.dependencies.Input('event-selection','value'),
+         dash.dependencies.Input('gender-selection','value'),
+         dash.dependencies.Input('performer-selection', 'value')])
+def update_table(selected_event, selected_gender, selected_performance):
+    filtered_df = pd.DataFrame(df[df['Event']==selected_event])
+    filtered_df = pd.DataFrame(filtered_df[filtered_df['Gender']==selected_gender])
+    filtered_df = filtered_df.sort_values('Time Full', ascending=True)
+    if selected_performance == "Performers":
+        filtered_df = filtered_df.groupby(('Event','Gender','Swimmer')).first()
+        filtered_df = filtered_df.reset_index()
+        filtered_df = filtered_df.sort_values(by='Time Full')
+    return generate_table(filtered_df)
+    
+@app.callback(dash.dependencies.Output('page-content', 'children'),
+              [dash.dependencies.Input('url', 'pathname')])
+def display_page(pathname):
+    if pathname == '/page-1':
+        return page_1_layout
+    else:
+        return index_page
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
