@@ -17,12 +17,45 @@ import plotly.graph_objs as go
 
 app = dash.Dash()
 
-df_raw = pd.read_csv('swimming_data.csv')
-df_raw['Year'] = pd.DatetimeIndex(df_raw['Date']).year
-df = df_raw[['Event', 'Time Full', 'Year', 'Swimmer', 'Gender']]
+df_SV_raw = pd.read_csv('swimming_data.csv')
+
+def cleanup_SV(df_SV_raw):
+    df_SV_raw['Year'] = pd.DatetimeIndex(df_SV_raw['Date']).year
+    df_SV_raw = df_SV_raw[['Event', 'Time Full', 'Year', 'Swimmer', 'Gender']]
+    return df_SV_raw
+
+df_SV = cleanup_SV(df_SV_raw)
+
+df_State_raw = pd.read_csv('swimming_data_state.csv')
+
+def cleanup_state(df_State_raw):
+    df_State_raw['Place'] = df_State_raw['Place'].fillna(0)
+    df_State_raw['Place'] = df_State_raw['Place'].apply(lambda x: int(x))
+    df_State_raw['Year'] = df_State_raw['Year'].fillna('NA')
+    df_State_raw['Year'] = df_State_raw['Year'].apply(lambda x: '09' if x=='9' else x)
+    years = [' FR ',' SO ',' JR ',' SR ',' 09 ',' 10 ',' 11 ',' 12 ']
+    df_State_raw['Year'] = df_State_raw['Year'].apply(lambda x: x if any(x == year for year in map(str.strip, years)) else 'NA')
+    for index, row in df_State_raw.iterrows():
+        school_name = row['School']
+        for year in years:
+            if year in school_name:
+                if row['Year'] not in map(str.strip, years):
+                    df_State_raw.loc[index, 'Year'] = year.strip()
+                df_State_raw.loc[index, 'School'] = school_name[school_name.find(year)+4:]
+                break
+    year_mapping = {'09':'FR', '10':'SO', '11':'JR', '12':'SR'}
+    df_State_raw['Year'].replace(year_mapping, inplace=True)
+    gender_mapping = {'Boys': 'Men', 'Girls':'Women'}
+    df_State_raw['Gender'].replace(gender_mapping, inplace=True)
+    return df_State_raw
+ 
+
+df_State = cleanup_state(df_State_raw)
+    
 
 app.config.supress_callback_exceptions=True
-unique_events = df['Event'].unique()
+
+unique_events = df_SV['Event'].unique()
 events = []
 for event in unique_events:
     events.append({'label': event, 'value': event})
@@ -33,6 +66,8 @@ gender = [{'label': 'M', 'value': 'M'},
 performer = [{'label': 'Top Performances', 'value': 'Performances'},
              {'label': 'Top Performers', 'value': 'Performers'}]
 
+
+df_SV = cleanup_SV(df_SV_raw)
 css = [
        'https://cdn.rawgit.com/plotly/dash-app-stylesheets/8485c028c19c393e9ab85e1a4fafd78c489609c2/dash-docs-base.css',
        'https://gonts.googleapis.com/css?family=Dosis',
@@ -47,7 +82,10 @@ app.layout = html.Div([
  
 index_page = html.Div([
         html.A([
-                dcc.Link('Reports', href='/page-1')
+                dcc.Link('Sky View Swimmers', href='/page-1')
+                ]),
+        html.A([
+                dcc.Link('State Swimming Reports', href='/page-2')
                 ])])
 
 page_1_layout = html.Div([
@@ -93,14 +131,14 @@ def generate_table(df, max_rows=10):
          dash.dependencies.Input('gender-selection','value'),
          dash.dependencies.Input('performer-selection', 'value')])
 def update_table(selected_event, selected_gender, selected_performance):
-    filtered_df = pd.DataFrame(df[df['Event']==selected_event])
-    filtered_df = pd.DataFrame(filtered_df[filtered_df['Gender']==selected_gender])
-    filtered_df = filtered_df.sort_values('Time Full', ascending=True)
+    filtered_df_SV = pd.DataFrame(df_SV[df_SV['Event']==selected_event])
+    filtered_df_SV = pd.DataFrame(filtered_df_SV[filtered_df_SV['Gender']==selected_gender])
+    filtered_df_SV = filtered_df_SV.sort_values('Time Full', ascending=True)
     if selected_performance == "Performers":
-        filtered_df = filtered_df.groupby(('Event','Gender','Swimmer')).first()
-        filtered_df = filtered_df.reset_index()
-        filtered_df = filtered_df.sort_values(by='Time Full')
-    return generate_table(filtered_df)
+        filtered_df_SV = filtered_df_SV.groupby(('Event','Gender','Swimmer')).first()
+        filtered_df_SV = filtered_df_SV.reset_index()
+        filtered_df_SV = filtered_df_SV.sort_values(by='Time Full')
+    return generate_table(filtered_df_SV)
     
 @app.callback(dash.dependencies.Output('page-content', 'children'),
               [dash.dependencies.Input('url', 'pathname')])
@@ -111,6 +149,8 @@ def display_page(pathname):
         pathname = pathname[:len(pathname) - 1]
     if pathname == '/page-1':
         return page_1_layout
+    if pathname == '/page-2':
+        return page_2_layout
     else:
         return index_page
 
