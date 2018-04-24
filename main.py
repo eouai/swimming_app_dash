@@ -50,7 +50,7 @@ def cleanup_state(df_State_raw):
                 break
     year_mapping = {'09':'FR', '10':'SO', '11':'JR', '12':'SR'}
     df_State_raw['Year'].replace(year_mapping, inplace=True)
-    gender_mapping = {'Boys': 'Men', 'Girls':'Women'}
+    gender_mapping = {'Boys': 'M', 'Men': 'M', 'Girls':'W', 'Women': 'W'}
     df_State_raw['Gender'].replace(gender_mapping, inplace=True)
     df_State_raw['time_cleanup'] = df_State_raw['Final Time'].apply(
             lambda x: re.sub("[^0-9\.\:]", "", x))
@@ -65,22 +65,31 @@ def cleanup_state(df_State_raw):
             lambda x: x.time().strftime('%M:%S%f')[:-4])
     df_State_raw['date_time'] = pd.to_datetime(df_State_raw['Date'])
     df_State_raw['date_year'] = df_State_raw['date_time'].map(lambda x: x.year)
+    df_State_raw['seed_time_split'] = df_State_raw['Seed'].apply(
+            lambda x: x.split(":"))
+    df_State_raw['seed_time_str'] = df_State_raw['seed_time_split'].apply(
+            lambda x: '0:59:59.99' if len(x[0]) == 0 else ('0:00:' + x[0] if len(x) == 1 else '0:0' +x[0] + ':' + x[1]))
+    df_State_raw['seed_time_obj'] = pd.to_datetime(df_State_raw['seed_time_str'])
     
     return df_State_raw
 
+df_State = cleanup_state(df_State_raw)
+
 def to_unix_time(dt):
     epoch = datetime.datetime.utcfromtimestamp(0)
-    return (dt - epoch).total_seconds() * 1000
-
-df_State = cleanup_state(df_State_raw)
-    
+    return (dt - epoch).total_seconds() * 1000 
 
 app.config.supress_callback_exceptions=True
 
-unique_events = df_SV['Event'].unique()
-events = []
-for event in unique_events:
-    events.append({'label': event, 'value': event})
+unique_SV_events = df_SV['Event'].unique()
+SV_events = []
+for event in unique_SV_events:
+    SV_events.append({'label': event, 'value': event})
+    
+unique_State_events = df_State['Event'].unique()
+State_events = []
+for event in unique_State_events:
+    State_events.append({'label': event, 'value': event})
 
 gender = [{'label': 'M', 'value': 'M'},
           {'label': 'F', 'value': 'F'}
@@ -120,7 +129,7 @@ page_1_layout = html.Div([
         html.Label('Event Select'),
         dcc.Dropdown(
                 id='event-selection',
-                options = events,
+                options = SV_events,
                 value='' #events[2]
                 ),
         html.Label('Gender Select'),
@@ -146,7 +155,7 @@ page_2_layout = html.Div([
         html.Label('Event Select'),
         dcc.Dropdown(
                 id='event-selection',
-                options = events,
+                options = State_events,
                 value='' #events[2]
                 ),
         html.Label('Gender Select'),
@@ -161,81 +170,120 @@ page_2_layout = html.Div([
             options = classes,
             value='' #gender[0]
             ),
-        dcc.Graph(id='seed-times',
-          figure={
+        dcc.Graph(id='seed-times')
+          
+        ])
+
+@app.callback(
+        dash.dependencies.Output('seed-times', 'figure'),
+        [dash.dependencies.Input('event-selection', 'value'),
+         dash.dependencies.Input('gender-selection', 'value'),
+         dash.dependencies.Input('class-selection', 'value')])
+def update_figure(selected_event, selected_gender, selected_class):
+    filtered_df_State = pd.DataFrame(df_State[df_State['Event'] == selected_event])
+    filtered_df_State = pd.DataFrame(filtered_df_State[filtered_df_State['Gender'] 
+        == selected_gender])
+    filtered_df_State = pd.DataFrame(filtered_df_State[filtered_df_State['Class'] 
+        == selected_class])
+    return generate_figure(filtered_df_State)
+
+def generate_figure(filtered_df_State):
+    return {
               'data': [go.Scatter(
-                  x=np.sort(df_State[(df_State['Event'] == '200 Yard Freestyle')
-                      & (df_State['Gender'] == 'Men')]['date_year'].unique()),
-                  y=df_State[(df_State['Event'] == '200 Yard Freestyle') 
-                      & (df_State['Gender'] == 'Men')]
-                      .groupby('date_year').time_obj.agg('min'),
-                  text=(df_State[(df_State['Event'] == '200 Yard Freestyle') 
-                      & (df_State['Gender'] == 'Men') 
-                      & (df_State['Place'] == 1)].sort_values(
+                  x=np.sort(filtered_df_State['date_year'].unique()),
+                  y=filtered_df_State.groupby('date_year').time_obj.agg('min'),
+                  text=(filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
                       .head(1)['Swimmer']).sort_index(ascending=False).str.cat(
-                      (df_State[(df_State['Event'] == '200 Yard Freestyle') 
-                      & (df_State['Gender'] == 'Men') 
-                      & (df_State['Place'] == 1)].sort_values(
+                      (filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
                       .head(1)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=False),
                       sep=' '
                       ).str.cat(
-                      (df_State[(df_State['Event'] == '200 Yard Freestyle') 
-                      & (df_State['Gender'] == 'Men') 
-                      & (df_State['Place'] == 1)].sort_values(
+                      (filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
                       .head(1)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
                       sep='.'        
                       ),
                   mode='lines+markers',
-                  name='State Champion'
+                  name='State Champion',
+                  hoverinfo='text'
                   ),
-                  go.Scatter(
-                  x=np.sort(df_State[(df_State['Event'] == '200 Yard Freestyle')
-                      & (df_State['Gender'] == 'Men')]['date_year'].unique()),
-                  y=df_State[(df_State['Event'] == '200 Yard Freestyle') 
-                      & (df_State['Gender'] == 'Men')
-                      & (df_State['Place'] == 8)]
+                go.Scatter(
+                  x=np.sort(filtered_df_State['date_year'].unique()),
+                  y=filtered_df_State[(filtered_df_State['Place'] == 8) 
+                      | (filtered_df_State['Place'] == 7)]
                       .groupby('date_year').time_obj.agg('min'),
-                  text=(df_State[(df_State['Event'] == '200 Yard Freestyle') 
-                      & (df_State['Gender'] == 'Men') 
-                      & (df_State['Place'] == 8)].sort_values(
+                  text=(filtered_df_State[(filtered_df_State['Place'] == 8) 
+                      | (filtered_df_State['Place'] == 7)].sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
                       .head(1)['Swimmer']).sort_index(ascending=False).str.cat(
-                      (df_State[(df_State['Event'] == '200 Yard Freestyle') 
-                      & (df_State['Gender'] == 'Men') 
-                      & (df_State['Place'] == 8)].sort_values(
+                      (filtered_df_State[(filtered_df_State['Place'] == 8) 
+                      | (filtered_df_State['Place'] == 7)].sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
                       .head(1)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=False),
                       sep=' '
                       ).str.cat(
-                      (df_State[(df_State['Event'] == '200 Yard Freestyle') 
-                      & (df_State['Gender'] == 'Men') 
-                      & (df_State['Place'] == 8)].sort_values(
+                      (filtered_df_State[(filtered_df_State['Place'] == 8) 
+                      | (filtered_df_State['Place'] == 7)].sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
                       .head(1)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
                       sep='.'        
                       ),
                   mode='lines+markers',
-                  name='8th Place'
-                  )                   
+                  name='8th Place',
+                  hoverinfo='text'
+                  ),
+                go.Scatter(
+                  x=np.sort(filtered_df_State['date_year'].unique()),
+                  y=filtered_df_State[(filtered_df_State['Place'] == 16) 
+                      | (filtered_df_State['Place'] == 15)]
+                      .groupby('date_year').time_obj.agg('min'),
+                  text=(filtered_df_State[filtered_df_State['Place'] == 16].sort_values(
+                        ['date_year','time_seconds'],ascending=[False,True])
+                      .groupby('date_year')[['Swimmer','time_obj','min_obj']]
+                      .head(1)['Swimmer']).sort_index(ascending=False).str.cat(
+                      (filtered_df_State[filtered_df_State['Place'] == 16].sort_values(
+                        ['date_year','time_seconds'],ascending=[False,True])
+                      .groupby('date_year')[['Swimmer','time_obj','min_obj']]
+                      .head(1)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=False),
+                      sep=' '
+                      ).str.cat(
+                      (filtered_df_State[filtered_df_State['Place'] == 16].sort_values(
+                        ['date_year','time_seconds'],ascending=[False,True])
+                      .groupby('date_year')[['Swimmer','time_obj','min_obj']]
+                      .head(1)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
+                      sep='.'        
+                      ),
+                  mode='lines+markers',
+                  name='16th Place',
+                  hoverinfo='text'
+                  ),
+                go.Scatter(
+                  x=np.sort(filtered_df_State['date_year'].unique()),
+                  y=filtered_df_State.groupby('date_year').seed_time_obj.agg('max'),
+                  text="",
+                  mode='lines+markers',
+                  name='State Qualifying Time',
+                  hoverinfo='text'
+                  )
                     ],
               'layout': go.Layout(
                   title='Seed Times by year',
-                  hovermode='closest',
-                  yaxis={'title': 'Times', 'range': [to_unix_time(datetime.datetime(2018,4,24,0,1,38)),
-                                                     to_unix_time(datetime.datetime(2018,4,24,0,1,50))]}
-                  
-                    )
-              })
-        ])
+                  yaxis={'title': 'Times', 'range': [
+                    to_unix_time(datetime.datetime(
+                            2018,4,24,0,int(filtered_df_State['time_seconds'].min()//60),
+                            int(filtered_df_State['time_seconds'].min()%60-1))),
+                    to_unix_time(datetime.datetime(
+                            2018,4,24,0,filtered_df_State['time_seconds'].max()//60,
+                            filtered_df_State['time_seconds'].max()%60+2))]})
+              }
     
 def generate_table(df, max_rows=10):
     return html.Table(
