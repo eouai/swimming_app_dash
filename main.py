@@ -12,6 +12,7 @@ import dash_html_components as html
 import dash_table_experiments as dt
 #from dash.dependencies import Input, Output
 import pandas as pd
+import regex as re
 import plotly.graph_objs as go
 
 
@@ -47,6 +48,10 @@ def cleanup_state(df_State_raw):
     df_State_raw['Year'].replace(year_mapping, inplace=True)
     gender_mapping = {'Boys': 'Men', 'Girls':'Women'}
     df_State_raw['Gender'].replace(gender_mapping, inplace=True)
+    df_State_raw['time_cleanup'] = df_State_raw['Final Time'].apply(lambda x: re.sub("[^0-9\.\:]", "", x))
+    df_State['time_split'] = df_State['time_cleanup'].apply(lambda x: x.split(":"))
+    df_State['time_seconds'] = df_State['time_split'].apply(lambda x: 999.9 if len(x[0]) == 0 else (float(x[0]) if len(x) == 1 else 60 * float(x[0]) + float(x[1])))
+
     return df_State_raw
  
 
