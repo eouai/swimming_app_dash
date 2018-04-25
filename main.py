@@ -57,9 +57,11 @@ def cleanup_state(df_State_raw):
     df_State_raw['time_split'] = df_State_raw['time_cleanup'].apply(
             lambda x: x.split(":"))
     df_State_raw['time_seconds'] = df_State_raw['time_split'].apply(
-            lambda x: 999.9 if len(x[0]) == 0 else (float(x[0]) if len(x) == 1 else 60 * float(x[0]) + float(x[1])))
+            lambda x: 999.9 if len(x[0]) == 0 else (float(x[0]) 
+            if len(x) == 1 else 60 * float(x[0]) + float(x[1])))
     df_State_raw['time_str'] = df_State_raw['time_split'].apply(
-            lambda x: '0:59:59.99' if len(x[0]) == 0 else ('0:00:' + x[0] if len(x) == 1 else '0:0' +x[0] + ':' + x[1]))
+            lambda x: '0:59:59.99' if len(x[0]) == 0 else ('0:00:' + x[0] 
+            if len(x) == 1 else '0:0' +x[0] + ':' + x[1]))
     df_State_raw['time_obj'] = pd.to_datetime(df_State_raw['time_str'])
     df_State_raw['min_obj'] = df_State_raw['time_obj'].apply(
             lambda x: x.time().strftime('%M:%S%f')[:-4])
@@ -68,9 +70,14 @@ def cleanup_state(df_State_raw):
     df_State_raw['seed_time_split'] = df_State_raw['Seed'].apply(
             lambda x: x.split(":"))
     df_State_raw['seed_time_str'] = df_State_raw['seed_time_split'].apply(
-            lambda x: '0:59:59.99' if len(x[0]) == 0 else ('0:00:' + x[0] if len(x) == 1 else '0:0' +x[0] + ':' + x[1]))
+            lambda x: '0:59:59.99' if len(x[0]) == 0 else ('0:00:' + x[0] 
+            if len(x) == 1 else '0:0' +x[0] + ':' + x[1]))
     df_State_raw['seed_time_obj'] = pd.to_datetime(df_State_raw['seed_time_str'])
-    
+    df_State_raw['seed_min_obj'] = df_State_raw['seed_time_obj'].apply(
+        lambda x: x.time().strftime('%M:%S%f')[:-4])
+    df_State_raw['seed_time_seconds'] = df_State_raw['seed_time_split'].apply(
+            lambda x: 999.9 if len(x[0]) == 0 else (float(x[0]) 
+            if len(x) == 1 else 60 * float(x[0]) + float(x[1])))
     return df_State_raw
 
 df_State = cleanup_state(df_State_raw)
@@ -78,6 +85,29 @@ df_State = cleanup_state(df_State_raw)
 def to_unix_time(dt):
     epoch = datetime.datetime.utcfromtimestamp(0)
     return (dt - epoch).total_seconds() * 1000 
+
+def get_date_vars(df):
+    timestamp = datetime.date.today()
+    year_val = timestamp.year
+    mon_val = timestamp.month
+    day_val = timestamp.day
+    hour_val = 0
+    min_val_min = int(df.sort_values('time_seconds')
+        ['time_seconds'].head(1))//60
+    sec_val_min = int(df.sort_values('time_seconds')
+        ['time_seconds'].head(1)%60)-1
+    print(year_val, mon_val, day_val, hour_val, min_val_min, sec_val_min)
+    min_val_max = int(df.sort_values('seed_time_seconds',ascending=False)
+        ['seed_time_seconds'].head(1))//60
+    sec_val_max = int(df.sort_values('seed_time_seconds',ascending=False)
+        ['seed_time_seconds'].head(1)%60)+2
+    if sec_val_min < 0:
+        min_val_min = min_val_min - 1
+        sec_val_min = sec_val_min + 60
+    if sec_val_max > 60:
+        min_val_max = min_val_max + 1
+        sec_val_max = sec_val_max - 60
+    return year_val,mon_val,day_val,hour_val,min_val_min,sec_val_min,min_val_max,sec_val_max
 
 app.config.supress_callback_exceptions=True
 
@@ -92,7 +122,7 @@ for event in unique_State_events:
     State_events.append({'label': event, 'value': event})
 
 gender = [{'label': 'M', 'value': 'M'},
-          {'label': 'F', 'value': 'F'}
+          {'label': 'F', 'value': 'W'}
         ]
 performer = [{'label': 'Top Performances', 'value': 'Performances'},
              {'label': 'Top Performers', 'value': 'Performers'}]
@@ -185,9 +215,14 @@ def update_figure(selected_event, selected_gender, selected_class):
         == selected_gender])
     filtered_df_State = pd.DataFrame(filtered_df_State[filtered_df_State['Class'] 
         == selected_class])
-    return generate_figure(filtered_df_State)
+    year_val, mon_val, day_val, hour_val, min_val_min, sec_val_min, min_val_max, sec_val_max = get_date_vars(filtered_df_State)
+    y_axis_min = to_unix_time(datetime.datetime(year_val,mon_val,day_val,hour_val,
+                                                min_val_min,sec_val_min))
+    y_axis_max = to_unix_time(datetime.datetime(year_val,mon_val,day_val,hour_val,
+                                                min_val_max,sec_val_max))
+    return generate_figure(filtered_df_State, y_axis_min, y_axis_max)
 
-def generate_figure(filtered_df_State):
+def generate_figure(filtered_df_State, y_axis_min, y_axis_max):
     return {
               'data': [go.Scatter(
                   x=np.sort(filtered_df_State['date_year'].unique()),
@@ -214,26 +249,21 @@ def generate_figure(filtered_df_State):
                   ),
                 go.Scatter(
                   x=np.sort(filtered_df_State['date_year'].unique()),
-                  y=filtered_df_State[(filtered_df_State['Place'] == 8) 
-                      | (filtered_df_State['Place'] == 7)]
-                      .groupby('date_year').time_obj.agg('min'),
-                  text=(filtered_df_State[(filtered_df_State['Place'] == 8) 
-                      | (filtered_df_State['Place'] == 7)].sort_values(
+                  y=filtered_df_State.groupby('date_year').time_obj.nth(7),
+                  text=(filtered_df_State.sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                      .head(1)['Swimmer']).sort_index(ascending=False).str.cat(
-                      (filtered_df_State[(filtered_df_State['Place'] == 8) 
-                      | (filtered_df_State['Place'] == 7)].sort_values(
+                      .nth(7)['Swimmer']).sort_index(ascending=True).str.cat(
+                      (filtered_df_State.sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                      .head(1)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=False),
+                      .nth(7)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=True),
                       sep=' '
                       ).str.cat(
-                      (filtered_df_State[(filtered_df_State['Place'] == 8) 
-                      | (filtered_df_State['Place'] == 7)].sort_values(
+                      (filtered_df_State.sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                      .head(1)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
+                      .nth(7)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=True),
                       sep='.'        
                       ),
                   mode='lines+markers',
@@ -242,23 +272,21 @@ def generate_figure(filtered_df_State):
                   ),
                 go.Scatter(
                   x=np.sort(filtered_df_State['date_year'].unique()),
-                  y=filtered_df_State[(filtered_df_State['Place'] == 16) 
-                      | (filtered_df_State['Place'] == 15)]
-                      .groupby('date_year').time_obj.agg('min'),
-                  text=(filtered_df_State[filtered_df_State['Place'] == 16].sort_values(
+                  y=filtered_df_State.groupby('date_year').time_obj.nth(15),
+                  text=(filtered_df_State.sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                      .head(1)['Swimmer']).sort_index(ascending=False).str.cat(
-                      (filtered_df_State[filtered_df_State['Place'] == 16].sort_values(
+                      .nth(15)['Swimmer']).sort_index(ascending=True).str.cat(
+                      (filtered_df_State.sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                      .head(1)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=False),
+                      .nth(15)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=True),
                       sep=' '
                       ).str.cat(
-                      (filtered_df_State[filtered_df_State['Place'] == 16].sort_values(
+                      (filtered_df_State.sort_values(
                         ['date_year','time_seconds'],ascending=[False,True])
                       .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                      .head(1)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
+                      .nth(15)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=True),
                       sep='.'        
                       ),
                   mode='lines+markers',
@@ -268,7 +296,16 @@ def generate_figure(filtered_df_State):
                 go.Scatter(
                   x=np.sort(filtered_df_State['date_year'].unique()),
                   y=filtered_df_State.groupby('date_year').seed_time_obj.agg('max'),
-                  text="",
+                  text=((filtered_df_State.sort_values(
+                        ['date_year','seed_time_seconds'],ascending=[False,False])
+                      .groupby('date_year')[['Swimmer','seed_time_obj','seed_min_obj']]
+                      .head(1)['seed_min_obj'].apply(lambda x: x[:5]).sort_index(ascending=False)).str.cat(
+                      (filtered_df_State.sort_values(
+                        ['date_year','seed_time_seconds'],ascending=[False,False])
+                      .groupby('date_year')[['Swimmer','seed_time_obj','seed_min_obj']]
+                      .head(1)['seed_min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
+                      sep='.'
+                      )),
                   mode='lines+markers',
                   name='State Qualifying Time',
                   hoverinfo='text'
@@ -276,14 +313,8 @@ def generate_figure(filtered_df_State):
                     ],
               'layout': go.Layout(
                   title='Seed Times by year',
-                  yaxis={'title': 'Times', 'range': [
-                    to_unix_time(datetime.datetime(
-                            2018,4,24,0,int(filtered_df_State['time_seconds'].min()//60),
-                            int(filtered_df_State['time_seconds'].min()%60-1))),
-                    to_unix_time(datetime.datetime(
-                            2018,4,24,0,filtered_df_State['time_seconds'].max()//60,
-                            filtered_df_State['time_seconds'].max()%60+2))]})
-              }
+                  yaxis={'title': 'Times', 'range': [y_axis_min,y_axis_max]})
+              } 
     
 def generate_table(df, max_rows=10):
     return html.Table(
