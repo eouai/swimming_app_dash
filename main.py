@@ -360,7 +360,7 @@ def generate_table(df, max_rows=10):
             #body
             [html.Tr([
                     html.Td(df.iloc[i][col]) for col in df.columns
-            ]) for i in range(min(len(df), max_rows))]            
+            ]) for i in range(min(len(df), max_rows))]
             )
 
 @app.callback(
