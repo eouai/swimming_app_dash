@@ -16,9 +16,10 @@ import re
 import numpy as np
 import datetime
 import plotly.graph_objs as go
+import flask
 
-
-app = dash.Dash()
+server = flask.Flask(__name__)
+app = dash.Dash(__name__, server=server)
 
 df_SV_raw = pd.read_csv('swimming_data.csv')
 
@@ -93,7 +94,7 @@ def get_date_vars(df, selected_class):
     year_val = 2000 #timestamp.year
     mon_val = 1 #timestamp.month
     day_val = 1 #timestamp.day
-    hour_val = 0
+    hour_val = 5
     min_val_min = int(df.sort_values('time_seconds')['time_seconds'].head(1))//60
     sec_val_min = int(df.sort_values('time_seconds')
         ['time_seconds'].head(1)%60)-1
@@ -101,12 +102,12 @@ def get_date_vars(df, selected_class):
         min_val_max = int(df.sort_values('seed_time_seconds',ascending=False)
             ['seed_time_seconds'].head(1))//60
         sec_val_max = int(df.sort_values('seed_time_seconds',ascending=False)
-            ['seed_time_seconds'].head(1)%60)+2
+            ['seed_time_seconds'].head(1)%60)+1
     else:
         min_val_max = int(df.sort_values('time_seconds').groupby('date_year') \
             .time_seconds.nth(15).max()//60)
         sec_val_max = int(df.sort_values('time_seconds').groupby('date_year') \
-            .time_seconds.nth(15).max()%60+4)      
+            .time_seconds.nth(15).max()%60+1)
     if sec_val_min < 0:
         min_val_min = min_val_min - 1
         sec_val_min = sec_val_min + 60
@@ -270,7 +271,8 @@ def generate_figure(filtered_df_State, y_axis_min, y_axis_max, selected_event, s
               )) if len(selected_class) == 1 else ""),
               mode='lines+markers',
               name='State Qualifying Time',
-              hoverinfo='text'
+              hoverinfo='text',
+              marker=dict(size=10)
           ),
           go.Scatter(
               x=np.sort(filtered_df_State['date_year'].unique()),
@@ -293,7 +295,8 @@ def generate_figure(filtered_df_State, y_axis_min, y_axis_max, selected_event, s
               )),
               mode='lines+markers',
               name='16th Place',
-              hoverinfo='text'
+              hoverinfo='text',
+              marker=dict(size=10)
           ),
           go.Scatter(
               x=np.sort(filtered_df_State['date_year'].unique()),
@@ -316,39 +319,46 @@ def generate_figure(filtered_df_State, y_axis_min, y_axis_max, selected_event, s
               )),
               mode='lines+markers',
               name='8th Place',
-              hoverinfo='text'
+              hoverinfo='text',
+              marker=dict(size=10)
           ),
           go.Scatter(
               x=np.sort(filtered_df_State['date_year'].unique()),
               y=filtered_df_State.sort_values('time_seconds').groupby('date_year').time_obj.nth(0),
               text=((filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
                     ['date_year','time_seconds'],ascending=[False,True])
-                  .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                  .head(1)['Swimmer']).sort_index(ascending=False).str.cat(
+                    .groupby('date_year')[['Swimmer','time_obj','min_obj']]
+                    .head(1)['Swimmer']).sort_index(ascending=False).str.cat(
                   (filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
                     ['date_year','time_seconds'],ascending=[False,True])
-                  .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                  .head(1)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=False),
-                  sep=' '
+                    .groupby('date_year')[['Swimmer','time_obj','min_obj']]
+                    .head(1)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=False),
+                    sep=' '
                   ).str.cat(
-                  (filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
+                    (filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
                     ['date_year','time_seconds'],ascending=[False,True])
-                  .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                  .head(1)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
-                  sep='.'
-          )),
-          mode='lines+markers',
-          name='State Champion',
-          hoverinfo='text'
-          )],
+                    .groupby('date_year')[['Swimmer','time_obj','min_obj']]
+                    .head(1)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
+                    sep='.'
+                  ) + ((" - " + filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
+                    ['date_year','time_seconds'],ascending=[False,True])
+                    .groupby('date_year')['Class'].head(1).sort_index(ascending=False))
+                    if len(selected_class) > 1 else "")
+              ),
+              mode='lines+markers',
+              name='State Champion',
+              hoverinfo='text',
+              marker=dict(size=10)
+              )],
       'layout': go.Layout(
-          title='State Times by Year',
+          title='%s State Finals Times by Year - %s' % (selected_event, selected_class),
           yaxis={'title': 'Times',
                  'range': [y_axis_min,y_axis_max],
                  'tickformat': '%M:%S.%2f'},
           xaxis={'title': 'Year',
                  'dtick': 1},
-          hovermode='closest'
+          hovermode='closest',
+          hoverlabel=dict(bgcolor='white', font=dict(size=18))
           )
       }
     
@@ -396,4 +406,3 @@ app.css.append_css({'external_url': css})
 
 if __name__ == '__main__':
     app.run_server(debug=True)
-    
