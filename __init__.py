@@ -12,14 +12,16 @@ import dash_html_components as html
 #import dash_table_experiments as dte
 #from dash.dependencies import Input, Output
 import pandas as pd
-import re
+import regex as re
 import numpy as np
 import datetime
 import plotly.graph_objs as go
 import flask
+import os
 
-server = flask.Flask(__name__)
-app = dash.Dash(__name__, server=server)
+#os.chdir('/var/www/FlaskApp/FlaskApp')
+
+app = dash.Dash()
 
 df_SV_raw = pd.read_csv('swimming_data.csv')
 
@@ -403,6 +405,8 @@ def display_page(pathname):
         return index_page
 
 app.css.append_css({'external_url': css})
+
+server = app.server
 
 if __name__ == '__main__':
     app.run_server(debug=True)
