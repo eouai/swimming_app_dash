@@ -36,10 +36,12 @@ year_mapping = {'09':'FR', '10':'SO', '11':'JR', '12':'SR'}
 gender_mapping = {'Boys': 'M', 'Men': 'M', 'Girls':'W', 'Women': 'W'}
 css = [
        'https://cdn.rawgit.com/plotly/dash-app-stylesheets/8485c028c19c393e9ab85e1a4fafd78c489609c2/dash-docs-base.css',
-       'https://gonts.googleapis.com/css?family=Dosis',
-       'https://dcnjs.cloudflare.com/ajax.libs/font-awesome/4.7.0/css/font-awesome.min.css'
-       ]
+#       'https://gonts.googleapis.com/css?family=Dosis',
+#       'https://dcnjs.cloudflare.com/ajax.libs/font-awesome/4.7.0/css/font-awesome.min.css',
 #        'https://cdn.rawgit.com/plotly/dash-app-stylesheets/30b641e2e89753b13e6557b9d65649f13ea7c64c/dash-docs-custom.css',
+       'https://codepen.io/chriddyp/pen/bWLwgP.css'
+       ]
+
 
 # Define CSV cleanup and processing methods
 def cleanup_SV(df_SV_raw):
