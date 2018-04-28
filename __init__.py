@@ -10,7 +10,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 #import dash_table_experiments as dte
-#from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output
 import pandas as pd
 #import regex as re
 import re
@@ -100,7 +100,7 @@ def process_times(df_State_raw):
             if len(x) == 1 else '2000-01-01 00:0' +x[0] + ':' + x[1]))
     df_State_raw['time_obj'] = pd.to_datetime(df_State_raw['time_str'])
     df_State_raw['min_obj'] = df_State_raw['time_obj'].apply(
-            lambda x: x.time().strftime('%M:%S%f')[:-4])
+            lambda x: x.time().strftime('%M:%S.%f')[:-4])
     df_State_raw['date_time'] = pd.to_datetime(df_State_raw['Date'])
     df_State_raw['date_year'] = df_State_raw['date_time'].map(lambda x: x.year)
     df_State_raw['seed_time_split'] = df_State_raw['Seed'].apply(
@@ -110,7 +110,7 @@ def process_times(df_State_raw):
             if len(x) == 1 else '2000-01-01 00:0' +x[0] + ':' + x[1]))
     df_State_raw['seed_time_obj'] = pd.to_datetime(df_State_raw['seed_time_str'])
     df_State_raw['seed_min_obj'] = df_State_raw['seed_time_obj'].apply(
-        lambda x: x.time().strftime('%M:%S%f')[:-4])
+        lambda x: x.time().strftime('%M:%S.%f')[:-4])
     df_State_raw['seed_time_seconds'] = df_State_raw['seed_time_split'].apply(
             lambda x: 999.9 if len(x[0]) == 0 else (float(x[0]) 
             if len(x) == 1 else 60 * float(x[0]) + float(x[1])))
@@ -155,6 +155,30 @@ def get_date_vars(df, selected_class):
         sec_val_max = sec_val_max - 60
     return year_val,mon_val,day_val,hour_val,min_val_min,sec_val_min,min_val_max,sec_val_max
 
+def generate_hover_text(filtered_df_State, place, selected_class):
+    hover_text = filtered_df_State.sort_values(
+        ['date_year', 'time_seconds'], ascending=[False, True]) \
+        .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']] \
+        .nth(place)['Swimmer'].sort_index(ascending=True).str.cat((filtered_df_State.sort_values(
+        ['date_year', 'time_seconds'], ascending=[False, True])
+     .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
+     .nth(place)['min_obj'].apply(lambda x: x[:8])).sort_index(ascending=True), sep = ' ')
+    if len(selected_class) > 1:
+        hover_text = hover_text + ' - ' + generate_class_hover_text(filtered_df_State, place)
+    return hover_text
+
+def generate_class_hover_text(filtered_df_State, place):
+    hover_text = filtered_df_State.sort_values(
+        ['date_year', 'time_seconds'], ascending=[False, True]) \
+        .groupby('date_year')[['Class']].nth(place)['Class'].sort_index(ascending=True)
+
+#        (filtered_df_State[filtered_df_State['Place'] == place].sort_values(
+#        ['date_year', 'time_seconds'], ascending=[False, True])
+#              .groupby('date_year')['Class'].head(1).sort_index(ascending=False))
+#             if len(selected_class) > 1 else "")
+#    )
+    return hover_text
+
 # Create dictionaries for dropdown menus
 unique_SV_events = df_SV['Event'].unique()
 SV_events = []
@@ -183,98 +207,36 @@ classes = [{'label': '6A', 'value': ['6A']},
 ##################  APP STRUCTURE #######################################
 #########################################################################
 
+vertical = True
 app.layout = html.Div([
-        dcc.Location(id='url', refresh=False),
-        html.Div(id='page-content')
-        ])
- 
-index_page = html.Div([
-        html.Button([
-                dcc.Link('Sky View Swimmers', href='/page-1/')
-                ]),
-        html.Button([
-                dcc.Link('State Swimming Reports', href='/page-2/')
-                ])])
+        html.Div(
+            dcc.Tabs(
+                tabs=[
+                    {'label': 'State Meet Reports', 'value': 1},
+                    {'label': 'Sky View Reports', 'value': 2},
+                ],
+                value=1,
+                id='tabs',
+                vertical=vertical,
+                style={
+                    'height': '100vh',
+                    'borderRight': 'thin lightgrey solid',
+                    'textAlign': 'left'
+                }
+            ),
+            style={'width': '20%', 'float': 'left'}
+        ),
+        html.Div(
+            html.Div(id='tab-output'),
+            style={'width': '80%', 'float': 'right'}
+        )
+    ], style={
+        'fontFamily': 'Sans-Serif',
+        'margin-left': 'auto',
+        'margin-right': 'auto',
+        'padding': '10px',
+    })
 
-page_1_layout = html.Div([
-    html.Div([
-        html.Label('Event Select'),
-        dcc.Dropdown(
-                id='event-selection',
-                options = SV_events,
-                value='' #events[2]
-                )],
-        style = dict(width = '50%',
-                     display = 'table-cell',
-                     ),
-        ),
-   html.Div([                 
-        html.Label('Gender Select'),
-        dcc.Dropdown(
-                id='gender-selection',
-                options = gender,
-                value='' #gender[0]
-                )],
-        style = dict(width = '100px',
-                     display = 'table-cell',
-                     ),
-        ),
-   html.Div([
-        html.Label('Performance Select'),
-        dcc.Dropdown(
-                id='performer-selection',
-                options = performer,
-                value='' #performer[0]
-                )],
-        style = dict(width = '200px',
-                     display = 'table-cell',
-                     ),
-        ),
-    html.Div([
-            html.Div(id='table-content')],
-            style={
-                    'font-size':'12px'
-                    },
-        )])
-
-page_2_layout = html.Div([
-    html.Div([
-        html.Label('Event Select'),
-        dcc.Dropdown(
-                id='event-selection',
-                options = State_events,
-                value='' #events[2]
-                )],
-        style = dict(width = '50%',
-                display = 'table-cell',
-                     ),
-        ),
-    html.Div([
-        html.Label('Gender Select'),
-        dcc.Dropdown(
-            id='gender-selection',
-            options = gender,
-            value='' #gender[0]
-            )],
-        style = dict(width = '100px',
-                display = 'table-cell',
-                     ),
-        ),
-    html.Div([
-        html.Label('Class Select'),
-        dcc.Dropdown(
-            id='class-selection',
-            options = classes,
-            value='' #gender[0]
-            )],
-        style = dict(width = '100px',
-                display = 'table-cell',
-                     ),
-        ),
-    html.Div([
-        dcc.Graph(id='seed-times')
-        ])
-    ])
 
 ##########################################################################
 ################# GRAPH AND TABLE DATA AND SETTINGS ######################
@@ -287,26 +249,7 @@ def generate_figure(filtered_df_State, y_axis_min, y_axis_max, selected_event, s
           go.Scatter(
               x=np.sort(filtered_df_State['date_year'].unique()),
               y=filtered_df_State.sort_values('time_seconds').groupby('date_year').time_obj.nth(0),
-              text=((filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
-                    ['date_year','time_seconds'],ascending=[False,True])
-                    .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                    .head(1)['Swimmer']).sort_index(ascending=False).str.cat(
-                  (filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
-                    ['date_year','time_seconds'],ascending=[False,True])
-                    .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                    .head(1)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=False),
-                    sep=' '
-                  ).str.cat(
-                    (filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
-                    ['date_year','time_seconds'],ascending=[False,True])
-                    .groupby('date_year')[['Swimmer','time_obj','min_obj']]
-                    .head(1)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
-                    sep='.'
-                  ) + ((" - " + filtered_df_State[filtered_df_State['Place'] == 1].sort_values(
-                    ['date_year','time_seconds'],ascending=[False,True])
-                    .groupby('date_year')['Class'].head(1).sort_index(ascending=False))
-                    if len(selected_class) > 1 else "")
-              ),
+              text=generate_hover_text(filtered_df_State, 0, selected_class),
               mode='lines+markers',
               name='State Champion',
               hoverinfo='text',
@@ -317,22 +260,7 @@ def generate_figure(filtered_df_State, y_axis_min, y_axis_max, selected_event, s
           go.Scatter(
               x=np.sort(filtered_df_State['date_year'].unique()),
               y=filtered_df_State.sort_values('time_seconds').groupby('date_year').time_obj.nth(7),
-              text=((filtered_df_State.sort_values(
-                  ['date_year', 'time_seconds'], ascending=[False, True])
-                  .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
-                  .nth(7)['Swimmer']).sort_index(ascending=True).str.cat(
-                  (filtered_df_State.sort_values(
-                      ['date_year', 'time_seconds'], ascending=[False, True])
-                   .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
-                   .nth(7)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=True),
-                  sep=' '
-                  ).str.cat(
-                  (filtered_df_State.sort_values(
-                      ['date_year', 'time_seconds'], ascending=[False, True])
-                   .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
-                   .nth(7)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=True),
-                  sep='.'
-              )),
+              text=generate_hover_text(filtered_df_State, 7, selected_class),
               mode='lines+markers',
               name='8th Place',
               hoverinfo='text',
@@ -343,22 +271,7 @@ def generate_figure(filtered_df_State, y_axis_min, y_axis_max, selected_event, s
           go.Scatter(
               x=np.sort(filtered_df_State['date_year'].unique()),
               y=filtered_df_State.sort_values('time_seconds').groupby('date_year').time_obj.nth(15),
-              text=((filtered_df_State.sort_values(
-                  ['date_year', 'time_seconds'], ascending=[False, True])
-                  .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
-                  .nth(15)['Swimmer']).sort_index(ascending=True).str.cat(
-                  (filtered_df_State.sort_values(
-                      ['date_year', 'time_seconds'], ascending=[False, True])
-                   .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
-                   .nth(15)['min_obj'].apply(lambda x: x[:5])).sort_index(ascending=True),
-                  sep=' '
-              ).str.cat(
-                  (filtered_df_State.sort_values(
-                      ['date_year', 'time_seconds'], ascending=[False, True])
-                   .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
-                   .nth(15)['min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=True),
-                  sep='.'
-              )),
+              text=generate_hover_text(filtered_df_State, 15, selected_class),
               mode='lines+markers',
               name='16th Place',
               hoverinfo='text',
@@ -427,10 +340,16 @@ def update_figure(selected_event, selected_gender, selected_class):
     filtered_df_State = filtered_df_State[filtered_df_State['Class'].isin(selected_class)]
     year_val, mon_val, day_val, hour_val, min_val_min, sec_val_min \
         ,min_val_max, sec_val_max = get_date_vars(filtered_df_State, selected_class)
+    if selected_event == '50 Yard Freestyle':
+        sec_val_max = sec_val_max - 2
+        sec_val_min = sec_val_min + 1
     y_axis_min = to_unix_time(datetime.datetime(year_val,mon_val,day_val,hour_val,
                                                 min_val_min,sec_val_min))
     y_axis_max = to_unix_time(datetime.datetime(year_val,mon_val,day_val,hour_val,
                                                 min_val_max,sec_val_max))
+    # need to reduce y_axis_min slightly so that display times that are nearly equal
+    # to the range min don't get cut off.
+    y_axis_min = y_axis_min - 100
     return generate_figure(filtered_df_State, y_axis_min, y_axis_max, selected_event, selected_gender, selected_class)
 
 # Callback for table - Sky View Top Swimmers by event
@@ -449,20 +368,95 @@ def update_table(selected_event, selected_gender, selected_performance):
         filtered_df_SV = filtered_df_SV.sort_values(by='Time Full')
     return generate_table(filtered_df_SV)
   
-# Callback for home-page navigation
-@app.callback(dash.dependencies.Output('page-content', 'children'),
-              [dash.dependencies.Input('url', 'pathname')])
-def display_page(pathname):
-    if pathname is None:
-        return ''
-    if pathname.endswith('/') and pathname != '/':
-        pathname = pathname[:len(pathname) - 1]
-    if pathname == '/page-1':
-        return page_1_layout
-    if pathname == '/page-2':
-        return page_2_layout
+@app.callback(Output('tab-output', 'children'), [Input('tabs', 'value')])
+def display_tab_content(value):
+    if value == 2:
+        return html.Div([
+            html.Div([
+                html.Label('Event Select'),
+                dcc.Dropdown(
+                        id='event-selection',
+                        options = SV_events,
+                        value='' #events[2]
+                        )],
+                style = dict(width = '200px',
+                             display = 'table-cell',
+                             padding = '5px',
+                             ),
+                ),
+           html.Div([
+                html.Label('Gender Select'),
+                dcc.Dropdown(
+                        id='gender-selection',
+                        options = gender,
+                        value='' #gender[0]
+                        )],
+                style = dict(width = '150px',
+                             display = 'table-cell',
+                             padding='5px',
+                             ),
+                ),
+           html.Div([
+                html.Label('Performance Select'),
+                dcc.Dropdown(
+                        id='performer-selection',
+                        options = performer,
+                        value='' #performer[0]
+                        )],
+                style = dict(width = '200px',
+                             display = 'table-cell',
+                             padding='5px',
+                             ),
+                ),
+           html.Div([
+                html.Div(id='table-content')],
+                style={
+                    'font-size':'12px'
+                    },
+                )])
     else:
-        return index_page
+        return  html.Div([
+            html.Div([
+                html.Label('Event Select'),
+                dcc.Dropdown(
+                        id='event-selection',
+                        options = State_events,
+                        value='' #events[2]
+                        )],
+                style = dict(width = '200px',
+                        display = 'table-cell',
+                        padding='5px',
+                        ),
+                ),
+            html.Div([
+                html.Label('Gender Select'),
+                dcc.Dropdown(
+                    id='gender-selection',
+                    options = gender,
+                    value='' #gender[0]
+                    )],
+                style = dict(width = '150px',
+                        display = 'table-cell',
+                        padding='5px',
+                        ),
+                ),
+            html.Div([
+                html.Label('Class Select'),
+                dcc.Dropdown(
+                    id='class-selection',
+                    options = classes,
+                    value='' #gender[0]
+                    )],
+                style = dict(width = '100px',
+                        display = 'table-cell',
+                        padding='5px',
+                        ),
+                ),
+            html.Div([
+                dcc.Graph(id='seed-times')
+                ])
+            ])
+
 
 # Lauch App
 app.css.append_css({'external_url': css})
