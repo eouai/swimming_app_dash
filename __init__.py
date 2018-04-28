@@ -133,7 +133,7 @@ def get_date_vars(df, selected_class):
     year_val = 2000 #timestamp.year
     mon_val = 1 #timestamp.month
     day_val = 1 #timestamp.day
-    hour_val = 0
+    hour_val = 5
     min_val_min = int(df.sort_values('time_seconds')['time_seconds'].head(1))//60
     sec_val_min = int(df.sort_values('time_seconds')
         ['time_seconds'].head(1)%60)-1
@@ -395,7 +395,8 @@ def generate_figure(filtered_df_State, y_axis_min, y_axis_max, selected_event, s
           xaxis={'title': 'Year',
                  'dtick': 1},
           hovermode='closest',
-          hoverlabel=dict(bgcolor='white', font=dict(size=18))
+          hoverlabel=dict(bgcolor='white', font=dict(size=18)),
+          height=500
           )
       }
     
