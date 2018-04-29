@@ -12,7 +12,6 @@ import dash_html_components as html
 #import dash_table_experiments as dte
 from dash.dependencies import Input, Output
 import pandas as pd
-#import regex as re
 import re
 import numpy as np
 import datetime
@@ -173,12 +172,6 @@ def generate_class_hover_text(filtered_df_State, place):
     hover_text = filtered_df_State.sort_values(
         ['date_year', 'time_seconds'], ascending=[False, True]) \
         .groupby('date_year')[['Class']].nth(place)['Class'].sort_index(ascending=True)
-
-#        (filtered_df_State[filtered_df_State['Place'] == place].sort_values(
-#        ['date_year', 'time_seconds'], ascending=[False, True])
-#              .groupby('date_year')['Class'].head(1).sort_index(ascending=False))
-#             if len(selected_class) > 1 else "")
-#    )
     return hover_text
 
 # Create dictionaries for dropdown menus
@@ -378,23 +371,23 @@ def display_tab_content(value):
                 html.Label('Event Select'),
                 dcc.Dropdown(
                         id='event-selection',
-                        options = SV_events,
+                        options=SV_events,
                         value='' #events[2]
                         )],
-                style = dict(width = '200px',
-                             display = 'table-cell',
-                             padding = '5px',
+                style=dict(width='200px',
+                             display='table-cell',
+                             padding='5px',
                              ),
                 ),
            html.Div([
                 html.Label('Gender Select'),
                 dcc.Dropdown(
                         id='gender-selection',
-                        options = gender,
+                        options=gender,
                         value='' #gender[0]
                         )],
-                style = dict(width = '150px',
-                             display = 'table-cell',
+                style=dict(width='150px',
+                             display='table-cell',
                              padding='5px',
                              ),
                 ),
@@ -402,11 +395,11 @@ def display_tab_content(value):
                 html.Label('Performance Select'),
                 dcc.Dropdown(
                         id='performer-selection',
-                        options = performer,
+                        options=performer,
                         value='' #performer[0]
                         )],
-                style = dict(width = '200px',
-                             display = 'table-cell',
+                style=dict(width='200px',
+                             display='table-cell',
                              padding='5px',
                              ),
                 ),
@@ -422,11 +415,11 @@ def display_tab_content(value):
                 html.Label('Event Select'),
                 dcc.Dropdown(
                         id='event-selection',
-                        options = State_events,
+                        options=State_events,
                         value='' #events[2]
                         )],
-                style = dict(width = '200px',
-                        display = 'table-cell',
+                style=dict(width='200px',
+                        display='table-cell',
                         padding='5px',
                         ),
                 ),
@@ -434,11 +427,11 @@ def display_tab_content(value):
                 html.Label('Gender Select'),
                 dcc.Dropdown(
                     id='gender-selection',
-                    options = gender,
+                    options=gender,
                     value='' #gender[0]
                     )],
-                style = dict(width = '150px',
-                        display = 'table-cell',
+                style=dict(width='150px',
+                        display='table-cell',
                         padding='5px',
                         ),
                 ),
@@ -446,16 +439,22 @@ def display_tab_content(value):
                 html.Label('Class Select'),
                 dcc.Dropdown(
                     id='class-selection',
-                    options = classes,
+                    options=classes,
                     value='' #gender[0]
                     )],
-                style = dict(width = '100px',
-                        display = 'table-cell',
+                style=dict(width='150px',
+                        display='table-cell',
                         padding='5px',
                         ),
                 ),
             html.Div([
-                dcc.Graph(id='seed-times')
+                dcc.Graph(
+                    id='seed-times',
+                    className='ten columns',
+                    config={'modeBarButtonsToRemove':
+                                ['zoomIn2d', 'zoomOut2d', 'lasso2d',
+                                 'autoScale2d', 'select2d', 'sendDataToCloud',
+                                 'toggleSpikelines', 'zoom2d']})
                 ])
             ])
 
