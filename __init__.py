@@ -101,7 +101,7 @@ app.layout = html.Div([
             dcc.Tabs(
                 tabs=[
                     {'label': 'State Meet Reports', 'value': 1},
-                    {'label': 'Sky View Reports', 'value': 2},
+                #    {'label': 'Sky View Reports', 'value': 2},
                 ],
                 value=1,
                 id='tabs',
@@ -227,8 +227,14 @@ def update_figure(selected_event, selected_gender, selected_class):
     time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
     y_axis_min = filtered_df_state.sort_values('time_obj').groupby('date_year')\
         .time_obj.nth(0).min() - timedelta(seconds=1)
-    y_axis_max = filtered_df_state[filtered_df_state['time_obj'] < time_cutoff]\
-        .sort_values('time_obj').groupby('date_year').time_obj.last().max()
+    if len(selected_class) > 1:
+        y_axis_max = filtered_df_state[filtered_df_state['time_obj'] < time_cutoff]\
+            .sort_values('time_obj').groupby('date_year').time_obj.nth(15).max() + timedelta(seconds=2)
+        if selected_event == '50 Yard Freestyle':
+            y_axis_max = y_axis_max - timedelta(seconds=1.5)
+    else:
+        y_axis_max = filtered_df_state[filtered_df_state['time_obj'] < time_cutoff]\
+            .sort_values('time_obj').groupby('date_year').time_obj.last().max()
     if selected_event == '50 Yard Freestyle':
         y_axis_min = y_axis_min + timedelta(seconds=.5)
     return generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, selected_gender, selected_class)
