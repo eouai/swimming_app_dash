@@ -101,7 +101,7 @@ app.layout = html.Div([
             dcc.Tabs(
                 tabs=[
                     {'label': 'State Meet Reports', 'value': 1},
-                #    {'label': 'Sky View Reports', 'value': 2},
+                    # {'label': 'Sky View Reports', 'value': 2},
                 ],
                 value=1,
                 id='tabs',
@@ -196,7 +196,8 @@ def generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, s
             height=500
             )
       }
-    
+
+
 def generate_table(df, max_rows=10):
     return html.Table(
             # header
@@ -285,7 +286,7 @@ def display_tab_content(value):
                     value='')],
                 style=dict(width='200px', display='table-cell', padding='5px')
             ),
-           html.Div([
+            html.Div([
                 html.Div(id='table-content')],
                 style={'font-size': '12px'},
                 )])
