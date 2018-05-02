@@ -142,12 +142,13 @@ gender = [{'label': 'M', 'value': 'M'},
 performer = [{'label': 'Top Performances', 'value': 'Performances'},
              {'label': 'Top Performers', 'value': 'Performers'}]
 
-classes = [{'label': '6A', 'value': ['6A']},
-           {'label': '5A', 'value': ['5A']},
-           {'label': '4A', 'value': ['4A']},
-           {'label': '3A', 'value': ['3A']},
-           {'label': '2A', 'value': ['2A']},
-           {'label': 'Overall', 'value': ['6A', '5A', '4A', '3A', '2A']}]
+classes = [{'label': 'Overall', 'value': 'Overall'},
+           {'label': '6A', 'value': '6A'},
+           {'label': '5A', 'value': '5A'},
+           {'label': '4A', 'value': '4A'},
+           {'label': '3A', 'value': '3A'},
+           {'label': '2A', 'value': '2A'},
+           ]
 
 #########################################################################
 #                   APP STRUCTURE                                       #
@@ -280,14 +281,15 @@ def generate_table(df, max_rows=10):
          dash.dependencies.Input('gender-selection', 'value'),
          dash.dependencies.Input('class-selection', 'value')])
 def update_figure(selected_event, selected_gender, selected_class):
+    if selected_class == 'Overall':
+        selected_class = ['6A', '5A', '4A', '3A', '2A']
+        overall_selected = True
+    else:
+        selected_class = [selected_class]
+        overall_selected = False
     filtered_df_state = pd.DataFrame(df_State[df_State['Event'] == selected_event])
     filtered_df_state = filtered_df_state[filtered_df_state['Gender'] == selected_gender]
     filtered_df_state = filtered_df_state[filtered_df_state['Class'].isin(selected_class)]
-
-    if len(selected_class) > 1:
-        overall_selected = True
-    else:
-        overall_selected = False
 
     time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
     filtered_df_state = filtered_df_state[filtered_df_state['time_obj'] < time_cutoff]
