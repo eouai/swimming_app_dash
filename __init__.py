@@ -23,7 +23,7 @@ import plotly.graph_objs as go
 
 # Create app and designate app settings
 app = dash.Dash()
-app.config.supress_callback_exceptions=True
+app.config.supress_callback_exceptions = True
 server = app.server
 
 # Define variables
@@ -46,7 +46,10 @@ df_State['seed_time_obj'] = df_State.seed_time_obj.apply(lambda x: datetime.strp
 #################################################
 
 
-def generate_hover_text(filtered_df_state, place, selected_class):
+def generate_hover_text(filtered_df_state, place, overall_selected):
+    min_y_count = get_finals_y_count(filtered_df_state)
+    if place > min_y_count:
+        place = min_y_count
     hover_text = filtered_df_state.sort_values(
         ['date_year', 'time_seconds'], ascending=[False, True]) \
         .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']] \
@@ -55,7 +58,7 @@ def generate_hover_text(filtered_df_state, place, selected_class):
                                        ascending=[False, True])
          .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
          .nth(place)['min_obj'].apply(lambda x: x[:8])).sort_index(ascending=True), sep=' ')
-    if len(selected_class) > 1:
+    if overall_selected:
         hover_text = hover_text + ' - ' + generate_class_hover_text(filtered_df_state, place)
     return hover_text
 
@@ -65,6 +68,61 @@ def generate_class_hover_text(filtered_df_state, place):
         ['date_year', 'time_seconds'], ascending=[False, True]) \
         .groupby('date_year')[['Class']].nth(place)['Class'].sort_index(ascending=True)
     return hover_text
+
+
+def generate_y_data(filtered_df_state, place):
+    min_y_count = get_finals_y_count(filtered_df_state)
+    if place > min_y_count:
+        y_data = filtered_df_state.sort_values('time_obj').groupby('date_year').time_obj.last()
+    else:
+        y_data = filtered_df_state.sort_values('time_obj').groupby('date_year').time_obj.nth(place)
+
+    return y_data
+
+
+def get_finals_y_count(filtered_df_state):
+    return int(filtered_df_state.sort_values('time_obj').groupby(
+        'date_year').time_obj.count().min()) - 1
+
+
+def generate_y_axis_max(filtered_df_state, overall_selected, selected_event):
+    if overall_selected:
+        y_axis_max = filtered_df_state.sort_values('time_obj')\
+                         .groupby('date_year').time_obj.nth(15).max() + timedelta(seconds=2)
+    else:
+        finals_max = filtered_df_state.sort_values('time_obj')\
+            .groupby('date_year').time_obj.last().max()
+        seed_max = filtered_df_state.sort_values('seed_time_obj')\
+            .groupby('date_year').seed_time_obj.last().max()
+        y_axis_max = max(finals_max, seed_max) + timedelta(seconds=2)
+    if selected_event == '50 Yard Freestyle':
+        y_axis_max = y_axis_max - timedelta(seconds=1.75)
+    return y_axis_max
+
+
+def generate_y_axis_min(filtered_df_state, selected_event):
+    y_axis_min = filtered_df_state.sort_values('time_obj').groupby('date_year')\
+                     .time_obj.nth(0).min() - timedelta(seconds=1)
+    if selected_event == '50 Yard Freestyle':
+        y_axis_min = y_axis_min + timedelta(seconds=.25)
+    return y_axis_min
+
+
+def generate_legend_name(place, overall_selected, selected_class):
+    if overall_selected:
+        if place == 0:
+            return 'Fastest Overall State Time'
+        elif place == 7:
+            return '8th Fastest Overall Time'
+        else:
+            return '16th Fastest Overall Time'
+    else:
+        if place == 0:
+            return 'State Champion for ' + str(selected_class[0])
+        elif place == 7:
+            return '8th Place for ' + str(selected_class[0])
+        else:
+            return '16th Place for ' + str(selected_class[0])
 
 
 # Create dictionaries for dropdown menus
@@ -95,7 +153,7 @@ classes = [{'label': '6A', 'value': ['6A']},
 #                   APP STRUCTURE                                       #
 #########################################################################
 
-vertical = True
+vertical = False
 app.layout = html.Div([
         html.Div(
             dcc.Tabs(
@@ -130,16 +188,16 @@ app.layout = html.Div([
 #                 GRAPH AND TABLE DATA AND SETTINGS                      #
 ##########################################################################
 
-def generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, selected_gender, selected_class):
+def generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, selected_class, overall_selected):
     return {
         'data': [
             # Spline Graph for 1st place finisher in the event
             go.Scatter(
                 x=np.sort(filtered_df_state['date_year'].unique()),
-                y=filtered_df_state.sort_values('time_obj').groupby('date_year').time_obj.nth(0),
-                text=generate_hover_text(filtered_df_state, 0, selected_class),
+                y=generate_y_data(filtered_df_state, 0),
+                text=generate_hover_text(filtered_df_state, 0, overall_selected),
                 mode='lines+markers',
-                name='State Champion',
+                name=generate_legend_name(0, overall_selected, selected_class),
                 hoverinfo='text',
                 marker=dict(size=10),
                 line=dict(shape='spline')
@@ -147,10 +205,10 @@ def generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, s
             # Spline Graph for 8th place finisher in the event
             go.Scatter(
                 x=np.sort(filtered_df_state['date_year'].unique()),
-                y=filtered_df_state.sort_values('time_obj').groupby('date_year').time_obj.nth(7),
-                text=generate_hover_text(filtered_df_state, 7, selected_class),
+                y=generate_y_data(filtered_df_state, 7),
+                text=generate_hover_text(filtered_df_state, 7, overall_selected),
                 mode='lines+markers',
-                name='8th Place',
+                name=generate_legend_name(7, overall_selected, selected_class),
                 hoverinfo='text',
                 marker=dict(size=10),
                 line=dict(shape='spline')
@@ -158,19 +216,19 @@ def generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, s
             # Spline Graph for 16th place finisher in the event
             go.Scatter(
                 x=np.sort(filtered_df_state['date_year'].unique()),
-                y=filtered_df_state.sort_values('time_obj').groupby('date_year').time_obj.nth(15),
-                text=generate_hover_text(filtered_df_state, 15, selected_class),
+                y=generate_y_data(filtered_df_state, 15),
+                text=generate_hover_text(filtered_df_state, 15, overall_selected),
                 mode='lines+markers',
-                name='16th Place',
+                name=generate_legend_name(15, overall_selected, selected_class),
                 hoverinfo='text',
                 marker=dict(size=10),
                 line=dict(shape='spline')
                 ),
             # Spline Graph for slowest qualifying time for State in the event
             go.Scatter(
-                x=(np.sort(filtered_df_state['date_year'].unique()) if len(selected_class) == 1 else []),
-                y=(filtered_df_state.groupby('date_year').seed_time_obj.agg('max') if
-                   len(selected_class) == 1 else []),
+                x=(np.sort(filtered_df_state['date_year'].unique()) if not overall_selected else []),
+                y=(filtered_df_state.groupby('date_year').seed_time_obj.agg('max')
+                   if not overall_selected else []),
                 text=(((filtered_df_state.sort_values(
                     ['date_year', 'seed_time_seconds'], ascending=[False, False])
                         .groupby('date_year')[['Swimmer', 'seed_time_obj', 'seed_min_obj']]
@@ -178,7 +236,7 @@ def generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, s
                     (filtered_df_state.sort_values(['date_year', 'seed_time_seconds'], ascending=[False, False])
                      .groupby('date_year')[['Swimmer', 'seed_time_obj', 'seed_min_obj']]
                      .head(1)['seed_min_obj'].apply(lambda x: x[-2:])).sort_index(ascending=False),
-                    sep='.')) if len(selected_class) == 1 else ""),
+                    sep='.')) if not overall_selected else ""),
                 mode='lines+markers',
                 name='State Qualifying Time',
                 hoverinfo='text',
@@ -193,7 +251,8 @@ def generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, s
             xaxis={'title': 'Year', 'dtick': 1},
             hovermode='closest',
             hoverlabel=dict(bgcolor='white', font=dict(size=18)),
-            height=500
+            height=500,
+            dragmode='pan'
             )
       }
 
@@ -225,20 +284,17 @@ def update_figure(selected_event, selected_gender, selected_class):
     filtered_df_state = filtered_df_state[filtered_df_state['Gender'] == selected_gender]
     filtered_df_state = filtered_df_state[filtered_df_state['Class'].isin(selected_class)]
 
-    time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
-    y_axis_min = filtered_df_state.sort_values('time_obj').groupby('date_year')\
-        .time_obj.nth(0).min() - timedelta(seconds=1)
     if len(selected_class) > 1:
-        y_axis_max = filtered_df_state[filtered_df_state['time_obj'] < time_cutoff]\
-            .sort_values('time_obj').groupby('date_year').time_obj.nth(15).max() + timedelta(seconds=2)
-        if selected_event == '50 Yard Freestyle':
-            y_axis_max = y_axis_max - timedelta(seconds=1.5)
+        overall_selected = True
     else:
-        y_axis_max = filtered_df_state[filtered_df_state['time_obj'] < time_cutoff]\
-            .sort_values('time_obj').groupby('date_year').time_obj.last().max()
-    if selected_event == '50 Yard Freestyle':
-        y_axis_min = y_axis_min + timedelta(seconds=.5)
-    return generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, selected_gender, selected_class)
+        overall_selected = False
+
+    time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
+    filtered_df_state = filtered_df_state[filtered_df_state['time_obj'] < time_cutoff]
+
+    y_axis_min = generate_y_axis_min(filtered_df_state, selected_event)
+    y_axis_max = generate_y_axis_max(filtered_df_state, overall_selected, selected_event)
+    return generate_figure(filtered_df_state, y_axis_min, y_axis_max, selected_event, selected_class, overall_selected)
 
 
 # Callback for table - Sky View Top Swimmers by event
