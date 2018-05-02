@@ -49,15 +49,19 @@ df_State['seed_time_obj'] = df_State.seed_time_obj.apply(lambda x: datetime.strp
 def generate_hover_text(filtered_df_state, place, overall_selected):
     min_y_count = get_finals_y_count(filtered_df_state)
     if place > min_y_count:
-        place = min_y_count
-    hover_text = filtered_df_state.sort_values(
-        ['date_year', 'time_seconds'], ascending=[False, True]) \
-        .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']] \
-        .nth(place)['Swimmer'].sort_index(ascending=True).str.cat(
-        (filtered_df_state.sort_values(['date_year', 'time_seconds'],
-                                       ascending=[False, True])
-         .groupby('date_year')[['Swimmer', 'time_obj', 'min_obj']]
-         .nth(place)['min_obj'].apply(lambda x: x[:8])).sort_index(ascending=True), sep=' ')
+        hover_text = filtered_df_state.sort_values(
+            ['date_year', 'time_seconds'], ascending=[False, True])\
+            .groupby('date_year')['Swimmer'].last().str.cat(
+            (filtered_df_state.sort_values(
+                ['date_year', 'time_seconds'], ascending=[False, True])
+             .groupby('date_year')['min_obj'].last()), sep=' ')
+    else:
+        hover_text = filtered_df_state.sort_values(
+            ['date_year', 'time_seconds'], ascending=[False, True]) \
+            .groupby('date_year')['Swimmer'].nth(place).str.cat(
+            (filtered_df_state.sort_values(
+                ['date_year', 'time_seconds'], ascending=[False, True])
+             .groupby('date_year')['min_obj'].nth(place)), sep=' ')
     if overall_selected:
         hover_text = hover_text + ' - ' + generate_class_hover_text(filtered_df_state, place)
     return hover_text
