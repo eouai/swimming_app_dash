@@ -2,6 +2,7 @@
 
 import pandas as pd
 import re
+import numpy as np
 import os
 
 #os.chdir('/var/www/FlaskApp/FlaskApp')
@@ -12,6 +13,7 @@ gender_mapping = {'Boys': 'M', 'Men': 'M', 'Girls':'W', 'Women': 'W'}
 # Read in initial data sets from CSV.
 df_SV_raw = pd.read_csv('data/swimming_data.csv')
 df_State_raw = pd.read_csv('data/swimming_data_state.csv')
+df_State_raw = df_State_raw[np.isfinite(df_State_raw['key'])]
 
 # Define CSV cleanup and processing methods
 def cleanup_SV(df_SV_raw):
@@ -41,13 +43,16 @@ def process_school_year(df_State_raw):
     df_State_raw['Year'] = df_State_raw['Year'].apply(
             lambda x: x if any(x == year for year in map(str.strip, school_years)) else 'NA')
     for index, row in df_State_raw.iterrows():
-        school_name = row['School']
-        for year in school_years:
-            if year in school_name:
-                if row['Year'] not in map(str.strip, school_years):
-                    df_State_raw.loc[index, 'Year'] = year.strip()
-                df_State_raw.loc[index, 'School'] = school_name[school_name.find(year)+4:]
-                break
+        if pd.isnull(row['School']):
+            continue
+        else:
+            school_name = row['School']
+            for year in school_years:
+                if year in school_name:
+                    if row['Year'] not in map(str.strip, school_years):
+                        df_State_raw.loc[index, 'Year'] = year.strip()
+                    df_State_raw.loc[index, 'School'] = school_name[school_name.find(year)+4:]
+                    break
     df_State_raw['Year'].replace(year_mapping, inplace=True)
     return df_State_raw
 
@@ -75,8 +80,10 @@ def process_times(df_State_raw):
             lambda x: x.time().strftime('%M:%S.%f')[:-4])
     df_State_raw['date_time'] = pd.to_datetime(df_State_raw['Date'])
     df_State_raw['date_year'] = df_State_raw['date_time'].map(lambda x: x.year)
-    df_State_raw['seed_time_split'] = df_State_raw['Seed'].apply(
-            lambda x: x.split(":"))
+    df_State_raw['seed_time_cleanup'] = df_State_raw['Seed'].apply(
+        lambda x: re.sub("[^0-9\.\:]", "", x))
+    df_State_raw['seed_time_split'] = df_State_raw['seed_time_cleanup'].apply(
+            lambda x: str(x).split(":"))
     df_State_raw['seed_time_str'] = df_State_raw['seed_time_split'].apply(
             lambda x: '2000-01-01 00:59:59.99' if len(x[0]) == 0 else ('2000-01-01 00:00:' + x[0]
             if len(x) == 1 else '2000-01-01 00:0' +x[0] + ':' + x[1]))

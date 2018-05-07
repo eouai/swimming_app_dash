@@ -295,6 +295,7 @@ def update_figure(selected_event, selected_gender, selected_class):
     filtered_df_state = pd.DataFrame(df_State[df_State['Event'] == selected_event])
     filtered_df_state = filtered_df_state[filtered_df_state['Gender'] == selected_gender]
     filtered_df_state = filtered_df_state[filtered_df_state['Class'].isin(selected_class)]
+    filtered_df_state = filtered_df_state[filtered_df_state['full_results']]
 
     time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
     filtered_df_state_seeds = filtered_df_state
