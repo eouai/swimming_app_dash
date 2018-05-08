@@ -323,24 +323,19 @@ def update_figure(selected_event, selected_gender, selected_class):
          dash.dependencies.Input('high-school-selection', 'value')])
 def update_table(selected_event, selected_gender, selected_highschool):
     filtered_df_state = pd.DataFrame(df_State[df_State['Event'] == selected_event])
-    # print(filtered_df_state)
     filtered_df_state = filtered_df_state[filtered_df_state['Gender'] == selected_gender]
-    # print(filtered_df_state)
     filtered_df_state = filtered_df_state[filtered_df_state['School'] == selected_highschool]
-    # print(filtered_df_state)
     best_seed_time = filtered_df_state.sort_values('seed_time_obj').groupby('Swimmer')[
         ['seed_time_obj', 'date_year']].nth(0)
     best_finals_time = filtered_df_state.sort_values('time_obj').groupby('Swimmer')[
         ['time_obj', 'date_year']].nth(0)
-    # print(best_finals_time)
-    # print(best_seed_time)
+
     combined = best_seed_time.append(best_finals_time)
     combined = combined.reset_index()
     combined['best_time'] = combined[['seed_time_obj', 'time_obj']].min(axis=1)
     combined = combined.sort_values('best_time').groupby('Swimmer')[['Swimmer', 'date_year', 'best_time']].nth(0)
     combined['best_time'] = combined['best_time'].apply(lambda x: x.strftime('%M:%S.%f')[:-4])
     combined = combined.sort_values('best_time')
-    # print(combined)
     return generate_table(combined)
 
 
