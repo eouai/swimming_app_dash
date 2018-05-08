@@ -36,7 +36,7 @@ css = [
 #
 
 # read in data
-df_SV = pd.read_csv('data/swimming_data_processed.csv')
+# df_SV = pd.read_csv('data/swimming_data_processed.csv')
 df_State = pd.read_csv('data/swimming_data_state_processed.csv')
 df_State['time_obj'] = df_State.time_obj.apply(lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f'))
 df_State['seed_time_obj'] = df_State.seed_time_obj.apply(lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f'))
@@ -130,15 +130,15 @@ def generate_legend_name(place, overall_selected, selected_class):
 
 
 # Create dictionaries for dropdown menus
-unique_SV_events = df_SV['Event'].unique()
-SV_events = []
-for event in unique_SV_events:
-    SV_events.append({'label': event, 'value': event})
+# unique_SV_events = df_SV['Event'].unique()
+# SV_events = []
+# for event in unique_SV_events:
+#    SV_events.append({'label': event, 'value': event})
     
-unique_State_events = df_State['Event'].unique()
-State_events = []
-for event in unique_State_events:
-    State_events.append({'label': event, 'value': event})
+unique_state_events = df_State['Event'].unique()
+state_events = []
+for event in unique_state_events:
+    state_events.append({'label': event, 'value': event})
 
 gender = [{'label': 'M', 'value': 'M'},
           {'label': 'F', 'value': 'W'}]
@@ -153,6 +153,13 @@ classes = [{'label': 'Overall', 'value': 'Overall'},
            {'label': '3A', 'value': '3A'},
            {'label': '2A', 'value': '2A'},
            ]
+
+unique_high_schools = df_State.School.unique()
+unique_high_schools.sort()
+high_schools = []
+for high_school in unique_high_schools:
+    high_schools.append({'label': high_school, 'value': high_school})
+
 
 #########################################################################
 #                       APP STRUCTURE                                   #
@@ -308,21 +315,33 @@ def update_figure(selected_event, selected_gender, selected_class):
                            y_axis_max, selected_event, selected_class, overall_selected)
 
 
-# Callback for table - Sky View Top Swimmers by event
+# Callback for table - Top Swimmers by event by highschool
 @app.callback(
         dash.dependencies.Output('table-content', 'children'),
         [dash.dependencies.Input('event-selection', 'value'),
          dash.dependencies.Input('gender-selection', 'value'),
-         dash.dependencies.Input('performer-selection', 'value')])
-def update_table(selected_event, selected_gender, selected_performance):
-    filtered_df_sv = pd.DataFrame(df_SV[df_SV['Event'] == selected_event])
-    filtered_df_sv = pd.DataFrame(filtered_df_sv[filtered_df_sv['Gender'] == selected_gender])
-    filtered_df_sv = filtered_df_sv.sort_values('Time Full', ascending=True)
-    if selected_performance == "Performers":
-        filtered_df_sv = filtered_df_sv.groupby(('Event', 'Gender', 'Swimmer')).first()
-        filtered_df_sv = filtered_df_sv.reset_index()
-        filtered_df_sv = filtered_df_sv.sort_values(by='Time Full')
-    return generate_table(filtered_df_sv)
+         dash.dependencies.Input('high-school-selection', 'value')])
+def update_table(selected_event, selected_gender, selected_highschool):
+    filtered_df_state = pd.DataFrame(df_State[df_State['Event'] == selected_event])
+    # print(filtered_df_state)
+    filtered_df_state = filtered_df_state[filtered_df_state['Gender'] == selected_gender]
+    # print(filtered_df_state)
+    filtered_df_state = filtered_df_state[filtered_df_state['School'] == selected_highschool]
+    # print(filtered_df_state)
+    best_seed_time = filtered_df_state.sort_values('seed_time_obj').groupby('Swimmer')[
+        ['seed_time_obj', 'date_year']].nth(0)
+    best_finals_time = filtered_df_state.sort_values('time_obj').groupby('Swimmer')[
+        ['time_obj', 'date_year']].nth(0)
+    # print(best_finals_time)
+    # print(best_seed_time)
+    combined = best_seed_time.append(best_finals_time)
+    combined = combined.reset_index()
+    combined['best_time'] = combined[['seed_time_obj', 'time_obj']].min(axis=1)
+    combined = combined.sort_values('best_time').groupby('Swimmer')[['Swimmer', 'date_year', 'best_time']].nth(0)
+    combined['best_time'] = combined['best_time'].apply(lambda x: x.strftime('%M:%S.%f')[:-4])
+    combined = combined.sort_values('best_time')
+    # print(combined)
+    return generate_table(combined)
 
 
 @app.callback(Output('tab-output', 'children'), [Input('tabs', 'value')])
@@ -333,7 +352,7 @@ def display_tab_content(value):
                 html.Label('Event Select'),
                 dcc.Dropdown(
                     id='event-selection',
-                    options=SV_events,
+                    options=state_events,
                     value='')],
                 style=dict(width='200px', display='table-cell', padding='5px', zIndex=1002),
             ),
@@ -346,12 +365,13 @@ def display_tab_content(value):
                 style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
             ),
             html.Div([
-                html.Label('Performance Select'),
+                html.Label('High School Select'),
                 dcc.Dropdown(
-                    id='performer-selection',
-                    options=performer,
+                    id='high-school-selection',
+                    placeholder='Type a high-school name...',
+                    options=high_schools,
                     value='')],
-                style=dict(width='200px', display='table-cell', padding='5px', zIndex=1002)
+                style=dict(width='250px', display='table-cell', padding='5px', zIndex=1002)
             ),
             html.Div([
                 html.Div(id='table-content')],
@@ -363,7 +383,7 @@ def display_tab_content(value):
                 html.Label('Event'),
                 dcc.Dropdown(
                     id='event-selection',
-                    options=State_events,
+                    options=state_events,
                     value='')],
                 style=dict(width='200px', display='table-cell', padding='5px', zIndex=1002),
             ),
