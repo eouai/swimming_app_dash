@@ -129,6 +129,25 @@ def generate_legend_name(place, overall_selected, selected_class):
             return '16th Place'
 
 
+def filter_slider_df(selected_event, selected_gender, selected_class, df):
+    if selected_class == 'Overall':
+        selected_class = ['6A', '5A', '4A', '3A', '2A']
+    else:
+        selected_class = [selected_class]
+
+    filtered_df_state = pd.DataFrame(df_State[df_State['Event'] == selected_event])
+    filtered_df_state = filtered_df_state[filtered_df_state['Gender'] == selected_gender]
+    filtered_df_state = filtered_df_state[filtered_df_state['Class'].isin(selected_class)]
+    filtered_df_state = filtered_df_state[filtered_df_state['full_results']]
+    return filtered_df_state
+
+
+def get_slider_years_range(filtered_df_state):
+    time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
+    filtered_df_state_finals = filtered_df_state[filtered_df_state['time_obj'] < time_cutoff]
+    years = np.sort(filtered_df_state_finals['date_year'].unique())
+    return years
+
 # Create dictionaries for dropdown menus
 # unique_SV_events = df_SV['Event'].unique()
 # SV_events = []
@@ -154,6 +173,8 @@ classes = [{'label': 'Overall', 'value': 'Overall'},
            {'label': '2A', 'value': '2A'},
            ]
 
+# default_year_min = 2012
+
 unique_high_schools = df_State.School.unique()
 unique_high_schools.sort()
 high_schools = []
@@ -170,8 +191,9 @@ app.layout = html.Div([
         html.Div(
             dcc.Tabs(
                 tabs=[
-                    {'label': 'State Meet Reports', 'value': 1},
-                    {'label': 'High School Reports', 'value': 2},
+                    {'label': 'Individual Events', 'value': 1},
+                    {'label': 'Reports by High School', 'value': 2},
+                    {'label': 'Relay Splits', 'value': 3},
                 ],
                 value=1,
                 id='tabs',
@@ -201,12 +223,14 @@ app.layout = html.Div([
 #                 GRAPH AND TABLE DATA AND SETTINGS                      #
 ##########################################################################
 
-def generate_figure(filtered_df_state_finals, filtered_df_state_seeds, y_axis_min, y_axis_max, selected_event, selected_class, overall_selected):
+def generate_figure(filtered_df_state_finals, filtered_df_state_seeds, y_axis_min,
+                    y_axis_max, selected_event, selected_class, overall_selected,
+                    year_range):
     return {
         'data': [
             # Spline Graph for 1st place finisher in the event
             go.Scatter(
-                x=np.sort(filtered_df_state_finals['date_year'].unique()),
+                x=np.arange(year_range[0], year_range[1]+1, 1),
                 y=generate_y_data(filtered_df_state_finals, 0),
                 text=generate_hover_text(filtered_df_state_finals, 0, overall_selected),
                 mode='lines+markers',
@@ -217,7 +241,7 @@ def generate_figure(filtered_df_state_finals, filtered_df_state_seeds, y_axis_mi
                 ),
             # Spline Graph for 8th place finisher in the event
             go.Scatter(
-                x=np.sort(filtered_df_state_finals['date_year'].unique()),
+                x=np.arange(year_range[0], year_range[1] + 1, 1),
                 y=generate_y_data(filtered_df_state_finals, 7),
                 text=generate_hover_text(filtered_df_state_finals, 7, overall_selected),
                 mode='lines+markers',
@@ -228,7 +252,7 @@ def generate_figure(filtered_df_state_finals, filtered_df_state_seeds, y_axis_mi
                 ),
             # Spline Graph for 16th place finisher in the event
             go.Scatter(
-                x=np.sort(filtered_df_state_finals['date_year'].unique()),
+                x=np.arange(year_range[0], year_range[1] + 1, 1),
                 y=generate_y_data(filtered_df_state_finals, 15),
                 text=generate_hover_text(filtered_df_state_finals, 15, overall_selected),
                 mode='lines+markers',
@@ -239,7 +263,7 @@ def generate_figure(filtered_df_state_finals, filtered_df_state_seeds, y_axis_mi
                 ),
             # Spline Graph for slowest qualifying time for State in the event
             go.Scatter(
-                x=(np.sort(filtered_df_state_seeds['date_year'].unique()) if not overall_selected else []),
+                x=np.arange(year_range[0], year_range[1] + 1, 1) if not overall_selected else [],
                 y=(filtered_df_state_seeds.groupby('date_year').seed_time_obj.agg('max')
                    if not overall_selected else []),
                 text=(((filtered_df_state_seeds.sort_values(
@@ -288,11 +312,12 @@ def generate_table(df, max_rows=10):
 
 # Callback for graph - State Swimming Results by year and event
 @app.callback(
-        dash.dependencies.Output('seed-times', 'figure'),
+        dash.dependencies.Output('individual-events', 'figure'),
         [dash.dependencies.Input('event-selection', 'value'),
          dash.dependencies.Input('gender-selection', 'value'),
-         dash.dependencies.Input('class-selection', 'value')])
-def update_figure(selected_event, selected_gender, selected_class):
+         dash.dependencies.Input('class-selection', 'value'),
+         dash.dependencies.Input('year-slider-selection', 'value')])
+def update_figure(selected_event, selected_gender, selected_class, year_range):
     if selected_class == 'Overall':
         selected_class = ['6A', '5A', '4A', '3A', '2A']
         overall_selected = True
@@ -311,8 +336,71 @@ def update_figure(selected_event, selected_gender, selected_class):
     y_axis_min = generate_y_axis_min(filtered_df_state_finals, selected_event)
     y_axis_max = generate_y_axis_max(filtered_df_state_finals, filtered_df_state_seeds,
                                      overall_selected, selected_event)
+    print(type(year_range))
+    print(year_range[0])
+    print(type(year_range[0]))
     return generate_figure(filtered_df_state_finals, filtered_df_state_seeds, y_axis_min,
-                           y_axis_max, selected_event, selected_class, overall_selected)
+                           y_axis_max, selected_event, selected_class, overall_selected,
+                           year_range)
+
+
+# Callback to update slider value
+@app.callback(dash.dependencies.Output('year-slider-selection', 'value'),
+              [dash.dependencies.Input('event-selection', 'value'),
+               dash.dependencies.Input('gender-selection', 'value'),
+               dash.dependencies.Input('class-selection', 'value')])
+def update_slider_value(selected_event, selected_gender, selected_class):
+    filtered_df_state = filter_slider_df(selected_event, selected_gender, selected_class, df_State)
+    years = get_slider_years_range(filtered_df_state)
+
+    if years.max() - years.min() > 10:
+        default_year_min = years.max() - 10
+    else:
+        default_year_min = years.min()
+    value = [default_year_min, years.max()]
+    return value
+
+
+# Callback to update slider marks
+@app.callback(dash.dependencies.Output('year-slider-selection', 'marks'),
+              [dash.dependencies.Input('event-selection', 'value'),
+               dash.dependencies.Input('gender-selection', 'value'),
+               dash.dependencies.Input('class-selection', 'value')])
+def update_slider_marks(selected_event, selected_gender, selected_class):
+    filtered_df_state = filter_slider_df(selected_event, selected_gender, selected_class, df_State)
+    years = get_slider_years_range(filtered_df_state)
+
+    marks_list = np.arange(years.min(), years.max() + 1, 1).tolist()
+    marks = {}
+    for mark in marks_list:
+        marks[mark] = str(mark)
+    return marks
+
+
+# Callback to update slider min
+@app.callback(dash.dependencies.Output('year-slider-selection', 'min'),
+              [dash.dependencies.Input('event-selection', 'value'),
+               dash.dependencies.Input('gender-selection', 'value'),
+               dash.dependencies.Input('class-selection', 'value')])
+def update_slider_min(selected_event, selected_gender, selected_class):
+    filtered_df_state = filter_slider_df(selected_event, selected_gender, selected_class, df_State)
+    years = get_slider_years_range(filtered_df_state)
+
+    slider_min = years.min()
+    return slider_min
+
+
+# Callback to update slider max
+@app.callback(dash.dependencies.Output('year-slider-selection', 'max'),
+              [dash.dependencies.Input('event-selection', 'value'),
+               dash.dependencies.Input('gender-selection', 'value'),
+               dash.dependencies.Input('class-selection', 'value')])
+def update_slider_max(selected_event, selected_gender, selected_class):
+    filtered_df_state = filter_slider_df(selected_event, selected_gender, selected_class, df_State)
+    years = get_slider_years_range(filtered_df_state)
+
+    slider_max = years.max()
+    return slider_max
 
 
 # Callback for table - Top Swimmers by event by highschool
@@ -348,7 +436,7 @@ def display_tab_content(value):
                 dcc.Dropdown(
                     id='event-selection',
                     options=state_events,
-                    value='')],
+                    value='200 Yard Freestyle')],
                 style=dict(width='200px', display='table-cell', padding='5px', zIndex=1002),
             ),
             html.Div([
@@ -356,7 +444,7 @@ def display_tab_content(value):
                 dcc.Dropdown(
                     id='gender-selection',
                     options=gender,
-                    value='')],
+                    value='W')],
                 style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
             ),
             html.Div([
@@ -365,13 +453,14 @@ def display_tab_content(value):
                     id='high-school-selection',
                     placeholder='Type a high-school name...',
                     options=high_schools,
-                    value='')],
+                    value='Alta High School')],
                 style=dict(width='250px', display='table-cell', padding='5px', zIndex=1002)
             ),
             html.Div([
                 html.Div(id='table-content')],
                 style={'font-size': '12px'},
-                )])
+            ),
+            ])
     else:
         return html.Div([
             html.Div([
@@ -379,7 +468,7 @@ def display_tab_content(value):
                 dcc.Dropdown(
                     id='event-selection',
                     options=state_events,
-                    value='')],
+                    value='200 Yard Freestyle')],
                 style=dict(width='200px', display='table-cell', padding='5px', zIndex=1002),
             ),
             html.Div([
@@ -387,7 +476,7 @@ def display_tab_content(value):
                 dcc.Dropdown(
                     id='gender-selection',
                     options=gender,
-                    value=''
+                    value='W'
                     )],
                 style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
             ),
@@ -396,18 +485,30 @@ def display_tab_content(value):
                 dcc.Dropdown(
                     id='class-selection',
                     options=classes,
-                    value=''
+                    value='Overall'
                     )],
                 style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
             ),
             html.Div([
                 dcc.Graph(
-                    id='seed-times',
+                    id='individual-events',
                     className='ten columns',
                     config={'modeBarButtonsToRemove': ['zoomIn2d', 'zoomOut2d', 'lasso2d',
                                                        'autoScale2d', 'select2d', 'sendDataToCloud',
                                                        'toggleSpikelines', 'zoom2d']})
-            ])
+            ]),
+            html.Div([
+                html.Label('Year Range',
+                           style=dict(width='50%', verticalAlign='bottom',
+                                      padding='20px', display='inline-block'))]),
+            html.Div([
+                dcc.RangeSlider(
+                    id='year-slider-selection',
+                    step=None,
+                    allowCross=False,
+                )],
+                style=dict(width='50%', verticalAlign='bottom',
+                           padding='20px', display='inline-block'))
         ])
 
 
