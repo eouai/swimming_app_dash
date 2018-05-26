@@ -328,6 +328,8 @@ def update_figure(selected_event, selected_gender, selected_class, year_range):
     filtered_df_state = filtered_df_state[filtered_df_state['Gender'] == selected_gender]
     filtered_df_state = filtered_df_state[filtered_df_state['Class'].isin(selected_class)]
     filtered_df_state = filtered_df_state[filtered_df_state['full_results']]
+    filtered_df_state = filtered_df_state[filtered_df_state['date_year'] >= year_range[0]]
+    filtered_df_state = filtered_df_state[filtered_df_state['date_year'] <= year_range[1]]
 
     time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
     filtered_df_state_seeds = filtered_df_state
@@ -338,6 +340,7 @@ def update_figure(selected_event, selected_gender, selected_class, year_range):
                                      overall_selected, selected_event)
     print(type(year_range))
     print(year_range[0])
+    print(year_range[1])
     print(type(year_range[0]))
     return generate_figure(filtered_df_state_finals, filtered_df_state_seeds, y_axis_min,
                            y_axis_max, selected_event, selected_class, overall_selected,
