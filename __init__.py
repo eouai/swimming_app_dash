@@ -33,11 +33,10 @@ css = [
     ]
 #    'https://gonts.googleapis.com/css?family=Dosis',
 #    'https://dcnjs.cloudflare.com/ajax.libs/font-awesome/4.7.0/css/font-awesome.min.css',
-#
 
 # read in data
 # Set data types
-# df_SV = pd.read_csv('data/swimming_data_processed.csv')
+
 
 def lookup(s):
     dates = {date: pd.to_datetime(date) for date in s.unique()}
@@ -146,7 +145,7 @@ def generate_y_axis_max(df, df_seeds, all_classes_selected, selected_event):
         if min_y_count > 15:
             min_y_count = 15
         y_axis_max = df.sort_values('time_obj').groupby('date_year')\
-                         .time_obj.nth(min_y_count).max() + timedelta(seconds=2)
+            .time_obj.nth(min_y_count).max() + timedelta(seconds=2)
     else:
         min_y_count = min(min_y_count, min_y_count2)
         finals_max = df.sort_values('time_obj').groupby('date_year')\
@@ -246,24 +245,25 @@ def filter_meets_and_event(df, selected_event, selected_meets):
         all_meets_selected = False
     else:
         all_meets_selected = True
-        if selected_event == '50 Yard Freestyle':
-            df1 = df[df['Event'] == selected_event]
-            df2 = df[(df['Event'] == '200 Yard Freestyle Relay') & (df['relay_position'] == '1.0')]
-            df = pd.concat([df1, df2])
-        elif selected_event == '100 Yard Freestyle':
-            df1 = df[df['Event'] == selected_event]
-            df2 = df[(df['Event'] == '400 Yard Freestyle Relay') & (df['relay_position'] == '1.0')]
-            df = pd.concat([df1, df2])
-        else:
-            df = df[df['Event'] == selected_event]
+        df = filter_event(df, selected_event)
     return df, df_seeds, all_meets_selected
 
 
-# Create dictionaries for dropdown menus
-# unique_SV_events = df_SV['Event'].unique()
-# SV_events = []
-# for event in unique_SV_events:
-#    SV_events.append({'label': event, 'value': event})
+def filter_event(df, selected_event):
+    if selected_event == '50 Yard Freestyle':
+        df1 = df[df['Event'] == selected_event]
+        df2 = df[(df['Event'] == '200 Yard Freestyle Relay') & (df['relay_position'] == '1.0')]
+        df = pd.concat([df1, df2])
+    elif selected_event == '100 Yard Freestyle':
+        df1 = df[df['Event'] == selected_event]
+        df2 = df[(df['Event'] == '400 Yard Freestyle Relay') & (df['relay_position'] == '1.0')]
+        df = pd.concat([df1, df2])
+    else:
+        df = df[df['Event'] == selected_event]
+    return df
+
+
+# Create dictionaries for drop-down menus
     
 unique_state_events = df_state['Event'].unique()
 state_events = []
@@ -288,7 +288,8 @@ finals_or_overall = [{'label': 'Display Results from State Finals ONLY', 'value'
                      {'label': 'Display Results from all meets - State, Regions, etc.', 'value': 'all_results'},
                      ]
 
-# default_year_min = 2012
+table_max_rows = [{'label': 'Display top 10', 'value': 10},
+                  {'label': 'Display top 20', 'value': 20}]
 
 unique_high_schools = df_state.School.unique()
 unique_high_schools.sort()
@@ -393,7 +394,7 @@ def generate_figure(df, df_seeds, y_axis_min, y_axis_max, selected_event,
             ],
         'layout': go.Layout(
             title='%s State Finals Times by Year - %s' % (selected_event, selected_class),
-            yaxis={'title': 'Times', 'range': [y_axis_max,y_axis_min],
+            yaxis={'title': 'Times', 'range': [y_axis_max, y_axis_min],
                    'tickformat': '%M:%S.%2f'},
             xaxis={'title': 'Year', 'dtick': 1},
             hovermode='closest',
@@ -498,28 +499,31 @@ def update_slider_max(selected_class):
     return slider_max
 
 
-# Callback for table - Top Swimmers by event by highschool
+# Callback for table - Top Swimmers by event by high-school
 @app.callback(
         dash.dependencies.Output('table-content', 'children'),
         [dash.dependencies.Input('event-selection', 'value'),
          dash.dependencies.Input('gender-selection', 'value'),
-         dash.dependencies.Input('high-school-selection', 'value')])
-def update_table(selected_event, selected_gender, selected_highschool):
-    filtered_df_state = pd.DataFrame(df_state[df_state['Event'] == selected_event])
-    filtered_df_state = filtered_df_state[filtered_df_state['Gender'] == selected_gender]
-    filtered_df_state = filtered_df_state[filtered_df_state['School'] == selected_highschool]
-    best_seed_time = filtered_df_state.sort_values('seed_time_obj').groupby('Swimmer')[
-        ['seed_time_obj', 'date_year']].nth(0)
-    best_finals_time = filtered_df_state.sort_values('time_obj').groupby('Swimmer')[
-        ['time_obj', 'date_year']].nth(0)
+         dash.dependencies.Input('high-school-selection', 'value'),
+         dash.dependencies.Input('table-rows', 'value')])
+def update_table(selected_event, selected_gender, selected_highschool, table_rows):
+    filtered_df_state = df_state[df_state['School'] == selected_highschool]
+    filtered_df_state = filter_gender(filtered_df_state, selected_gender)
+    filtered_df_state = filter_missing_times(filtered_df_state)
+    filtered_df_state = filter_event(filtered_df_state, selected_event)
 
-    combined = best_seed_time.append(best_finals_time)
-    combined = combined.reset_index()
-    combined['best_time'] = combined[['seed_time_obj', 'time_obj']].min(axis=1)
-    combined = combined.sort_values('best_time').groupby('Swimmer')[['Swimmer', 'date_year', 'best_time']].nth(0)
-    combined['best_time'] = combined['best_time'].apply(lambda x: x.strftime('%M:%S.%f')[:-4])
-    combined = combined.sort_values('best_time')
-    return generate_table(combined)
+    filtered_df_state = filtered_df_state.sort_values(['time_obj', 'Swimmer'])\
+        .drop_duplicates('Swimmer')
+    filtered_df_state = filtered_df_state[['Swimmer', 'Event', 'Meet', 'time_obj', 'date_year']]
+    filtered_df_state['time_obj'] = filtered_df_state['time_obj']\
+        .apply(lambda x: x.strftime('%M:%S.%f')[:-4])
+    filtered_df_state['Event'] = filtered_df_state['Event']\
+        .apply(lambda x: x + ' (lead-off)' if 'Relay' in x else x)
+    filtered_df_state = filtered_df_state.rename(columns={'date_year': 'Date',
+                                                          'time_obj': 'Best Time'})
+    filtered_df_state.insert(0, 'Rank', range(1, len(filtered_df_state)+1))
+
+    return generate_table(filtered_df_state, table_rows)
 
 
 @app.callback(Output('tab-output', 'children'), [Input('tabs', 'value')])
@@ -550,6 +554,14 @@ def display_tab_content(value):
                     options=high_schools,
                     value='Alta High School')],
                 style=dict(width='250px', display='table-cell', padding='5px', zIndex=1002)
+            ),
+            html.Div([
+                dcc.RadioItems(
+                    id='table-rows',
+                    options=table_max_rows,
+                    value=10
+                )],
+                style=dict(padding='10px', verticalAlign='middle', display='table-cell')
             ),
             html.Div([
                 html.Div(id='table-content')],
