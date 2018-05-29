@@ -10,6 +10,7 @@ import os
 year_mapping = {'09':'FR', '10':'SO', '11':'JR', '12':'SR'}
 gender_mapping = {'Boys': 'M', 'Men': 'M', 'Girls':'W', 'Women': 'W'}
 high_school_mapping = {"AHS": "Alta High School",
+                       "Ahs": "Alta High School",
                         "Ahs UT": "Alta High School",
                         "Alta": "Alta High School",
                         "Alta Hawks High School": "Alta High School",
@@ -137,6 +138,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Corner Canyon High S A": "Corner Canyon High School",
                         "Corner Canyon High School": "Corner Canyon High School",
                         "Corner Canyon High School ": "Corner Canyon High School",
+                        "COLTS": "Cottonwood High School",
                         "Colts": "Cottonwood High School",
                         "Colts-UT": "Cottonwood High School",
                         "Cottonwood": "Cottonwood High School",
@@ -146,6 +148,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Cottonwood High School-UT": "Cottonwood High School",
                         "Cottonwood High School-UT A": "Cottonwood High School",
                         "Cottonwood-UT": "Cottonwood High School",
+                        "CYP": "Cyprus High School",
                         "Cyp": "Cyprus High School",
                         "Cyprus": "Cyprus High School",
                         "Cyprus High School": "Cyprus High School",
@@ -178,6 +181,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Dixie High School A": "Dixie High School",
                         "Dixie-AK": "Dixie High School",
                         "Dixie-UT": "Dixie High School",
+                        "EAST": "East High School",
                         "East": "East High School",
                         "East High School": "East High School",
                         "East High School ": "East High School",
@@ -245,6 +249,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Hurricane High School A": "Hurricane High School",
                         "Hurricane High School-VA": "Hurricane High School",
                         "Hurricane High School-VA A": "Hurricane High School",
+                        "Ics": "Intermountain Christian School",
                         "ICS": "Intermountain Christian School",
                         "Inter Mtn": "Intermountain Christian School",
                         "Intermountain Christian High": "Intermountain Christian School",
@@ -293,6 +298,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Layton High School ": "Layton High School",
                         "Layton High School A": "Layton High School",
                         "Layton High School-UT": "Layton High School",
+                        "LEHI": "Lehi High School",
                         "Lehi": "Lehi High School",
                         "Lehi High School": "Lehi High School",
                         "Lehi High School ": "Lehi High School",
@@ -376,6 +382,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Ogden-AK": "Ogden High School",
                         "Ohs Tigers": "Ogden High School",
                         "Tigers": "Ogden High School",
+                        "OLY": "Olympus High School",
                         "Oly": "Olympus High School",
                         "Olympus": "Olympus High School",
                         "Olympus High School": "Olympus High School",
@@ -383,6 +390,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Olympus High School A": "Olympus High School",
                         "Olympus-AK": "Olympus High School",
                         "Olympus-UT": "Olympus High School",
+                        "Orem": "Orem High School",
                         "OREM": "Orem High School",
                         "Orem High School": "Orem High School",
                         "Orem High School ": "Orem High School",
@@ -403,6 +411,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Payson High School": "Payson High School",
                         "Payson High School ": "Payson High School",
                         "Payson High School A": "Payson High School",
+                        "Pineview": "Pine View High School",
                         "Pine View": "Pine View High School",
                         "Pine View High Schoool": "Pine View High School",
                         "Pine View-UT": "Pine View High School",
@@ -418,6 +427,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Pleasant Grove High School A": "Pleasant Grove High School",
                         "Pleasant Grove High School-UT": "Pleasant Grove High School",
                         "Pleasant Grove High School-UT A": "Pleasant Grove High School",
+                        "PROVO": "Provo High School",
                         "Provo": "Provo High School",
                         "Provo High School": "Provo High School",
                         "Provo High School ": "Provo High School",
@@ -438,6 +448,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Riverton High School A": "Riverton High School",
                         "Riverton High School-UT": "Riverton High School",
                         "Riverton High School-UT A": "Riverton High School",
+                        "RHSM": "Rowland Hall High School",
                         "RH": "Rowland Hall High School",
                         "Rhsm": "Rowland Hall High School",
                         "Rowland Hall": "Rowland Hall High School",
@@ -531,6 +542,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Taylorsville High School A": "Taylorsville High School",
                         "Taylorsville High School-UT": "Taylorsville High School",
                         "Taylorsville High School-UT A": "Taylorsville High School",
+                        "THS": "Taylorsville High School",
                         "Ths": "Taylorsville High School",
                         "T-Ville": "Taylorsville High School",
                         "Telos Academy": "Telos Academy High School",
@@ -538,6 +550,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Timpanogos High Schol": "Timpanogos High School",
                         "Timpanogos High Schol A": "Timpanogos High School",
                         "Timp": "Timpview High School",
+                        "TIMP": "Timpview High School",
                         "Timpview": "Timpview High School",
                         "Timpview High School": "Timpview High School",
                         "Timpview High School ": "Timpview High School",
@@ -559,6 +572,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Uintah-AK": "Uintah High School",
                         "Utes": "Uintah High School",
                         "Union High School": "Union High School",
+                        "VHS": "Viewmont High School",
                         "Vhs": "Viewmont High School",
                         "Viewmont": "Viewmont High School",
                         "Viewmont High School": "Viewmont High School",
@@ -589,6 +603,7 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Weber High School A": "Weber High School",
                         "Weber High School-UT": "Weber High School",
                         "Weber High School-UT A": "Weber High School",
+                        "WEST": "West High School",
                         "West": "West High School",
                         "West High School": "West High School",
                         "West High School ": "West High School",
@@ -615,54 +630,56 @@ high_school_mapping = {"AHS": "Alta High School",
                         "Woods Cross-AK": "Woods Cross High School",
                         "Woods Cross-UT": "Woods Cross High School",
                         "Wxhs": "Woods Cross High School",
-                        }
+                        "WXHS": "Woods Cross High School",
+                       }
 
 
 # Read in initial data sets from CSV.
 df_SV_raw = pd.read_csv('data/swimming_data.csv')
-df_State_raw = pd.read_csv('data/swimming_data_state.csv')
-df_State_raw = df_State_raw[np.isfinite(df_State_raw['key'])]
+df_state_raw = pd.read_csv('data/swimming_data_state.csv')
+df_state_raw = df_state_raw[np.isfinite(df_state_raw['key'])]
 
 
 # Define CSV cleanup and processing methods
-def cleanup_SV(df_SV_raw):
-    df_SV_raw['Year'] = pd.DatetimeIndex(df_SV_raw['Date']).year
-    df_SV_raw = df_SV_raw[['Event', 'Time Full', 'Year', 'Swimmer', 'Gender']]
-    return df_SV_raw
+def cleanup_SV(df):
+    df['Year'] = pd.DatetimeIndex(df['Date']).year
+    df = df[['Event', 'Time Full', 'Year', 'Swimmer', 'Gender']]
+    return df
 
 
-def cleanup_state(df_State_raw):
-    df_State_raw = process_place(df_State_raw)
-    df_State_raw = process_school_year(df_State_raw)
-    df_State_raw = process_gender(df_State_raw)
-    df_State_raw = process_times(df_State_raw)
-    df_State_raw = process_school_name(df_State_raw)
-    return df_State_raw
+def cleanup_state(df):
+    df = process_place(df)
+    df = process_school_year(df)
+    df = process_gender(df)
+    df = reshape_seed(df)
+    df = process_times(df)
+    df = process_school_name(df)
+    return df
 
 
-def process_school_name(df_State_raw):
-    df_State_raw['School'] = df_State_raw['School'].apply(lambda x: x.strip())
-    df_State_raw['School'] = df_State_raw['School'].apply(
+def process_school_name(df):
+    df['School'] = df['School'].apply(lambda x: x.strip())
+    df['School'] = df['School'].apply(
         lambda x: high_school_mapping[x] if x in high_school_mapping else x)
-    return df_State_raw
+    return df
 
 
-def process_place(df_State_raw):
+def process_place(df):
     # Fill NA with 0 and convert col to int format
-    df_State_raw['Place'] = df_State_raw['Place'].fillna(0)
-    df_State_raw['Place'] = df_State_raw['Place'].apply(lambda x: int(x))
-    return df_State_raw
+    df['Place'] = df['Place'].fillna(0)
+    df['Place'] = df['Place'].apply(lambda x: int(x))
+    return df
 
 
-def process_school_year(df_State_raw):
+def process_school_year(df):
     # Standardize school year formatting
     # Remove school year when it appears in school name col 'School'
-    df_State_raw['Year'] = df_State_raw['Year'].fillna('NA')
-    df_State_raw['Year'] = df_State_raw['Year'].apply(lambda x: '09' if x=='9' else x)
-    school_years = [' FR ',' SO ',' JR ',' SR ',' 09 ',' 10 ',' 11 ',' 12 ']
-    df_State_raw['Year'] = df_State_raw['Year'].apply(
+    df['Year'] = df['Year'].fillna('NA')
+    df['Year'] = df['Year'].apply(lambda x: '09' if x == '9' else x)
+    school_years = [' FR ', ' SO ', ' JR ', ' SR ', ' 09 ', ' 10 ', ' 11 ', ' 12 ']
+    df['Year'] = df['Year'].apply(
             lambda x: x if any(x == year for year in map(str.strip, school_years)) else 'NA')
-    for index, row in df_State_raw.iterrows():
+    for index, row in df.iterrows():
         if pd.isnull(row['School']):
             continue
         else:
@@ -670,68 +687,104 @@ def process_school_year(df_State_raw):
             for year in school_years:
                 if year in school_name:
                     if row['Year'] not in map(str.strip, school_years):
-                        df_State_raw.loc[index, 'Year'] = year.strip()
-                    df_State_raw.loc[index, 'School'] = school_name[school_name.find(year)+4:]
+                        df.loc[index, 'Year'] = year.strip()
+                    df.loc[index, 'School'] = school_name[school_name.find(year) + 4:]
                     break
-    df_State_raw['Year'].replace(year_mapping, inplace=True)
-    return df_State_raw
+    df['Year'].replace(year_mapping, inplace=True)
+    return df
 
 
-def process_gender(df_State_raw):
+def process_gender(df):
     # Standardize gender formatting
-    df_State_raw['Gender'].replace(gender_mapping, inplace=True)
-    return df_State_raw
+    df['Gender'].replace(gender_mapping, inplace=True)
+    return df
 
 
 def sub_chars(x):
     if x is not None:
         if len(re.findall('\d', x)) > 0:
-            x = re.sub("[^0-9\.\:]", "", x)
+            x = re.sub("[^0-9.:]", "", x)
         else:
             x = ''
     else:
         x = ''
     return x
 
-def process_times(df_State_raw):
-    # Times come in text format
-    # Convert times to time obj
-    # also extract seconds and minutes values, write those values to new col
-    df_State_raw['Final Time'] = df_State_raw['Final Time'].fillna(value='')
-    df_State_raw['time_cleanup'] = df_State_raw['Final Time'].apply(
-            lambda x: sub_chars(x))
-    df_State_raw['time_split'] = df_State_raw['time_cleanup'].apply(
-            lambda x: x.split(":"))
-    df_State_raw['time_seconds'] = df_State_raw['time_split'].apply(
-            lambda x: 999.9 if len(x[0]) == 0 else (float(x[0])
-            if len(x) == 1 else 60 * float(x[0]) + float(x[1])))
-    df_State_raw['time_str'] = df_State_raw['time_split'].apply(
-            lambda x: '2000-01-01 00:59:59.99' if len(x[0]) == 0 else ('2000-01-01 00:00:' + x[0]
-            if len(x) == 1 else '2000-01-01 00:0' +x[0] + ':' + x[1]))
-    df_State_raw['time_obj'] = pd.to_datetime(df_State_raw['time_str'])
-    df_State_raw['min_obj'] = df_State_raw['time_obj'].apply(
-            lambda x: x.time().strftime('%M:%S.%f')[:-4])
-    df_State_raw['date_time'] = pd.to_datetime(df_State_raw['Date'])
-    df_State_raw['date_year'] = df_State_raw['date_time'].map(lambda x: x.year)
-    df_State_raw['Seed'] = df_State_raw['Seed'].fillna(value='')
-    df_State_raw['seed_time_cleanup'] = df_State_raw['Seed'].apply(
-        lambda x: re.sub("[^0-9\.\:]", "", x))
-    df_State_raw['seed_time_split'] = df_State_raw['seed_time_cleanup'].apply(
-            lambda x: str(x).split(":"))
-    df_State_raw['seed_time_str'] = df_State_raw['seed_time_split'].apply(
-            lambda x: '2000-01-01 00:59:59.99' if len(x[0]) == 0 else ('2000-01-01 00:00:' + x[0]
-            if len(x) == 1 else '2000-01-01 00:0' +x[0] + ':' + x[1]))
-    df_State_raw['seed_time_obj'] = pd.to_datetime(df_State_raw['seed_time_str'])
-    df_State_raw['seed_min_obj'] = df_State_raw['seed_time_obj'].apply(
-        lambda x: x.time().strftime('%M:%S.%f')[:-4])
-    df_State_raw['seed_time_seconds'] = df_State_raw['seed_time_split'].apply(
-            lambda x: 999.9 if len(x[0]) == 0 else (float(x[0])
-            if len(x) == 1 else 60 * float(x[0]) + float(x[1])))
-    return df_State_raw
+
+def reshape_seed(df):
+    df['Final Time'] = df['Final Time'].fillna(value='')
+    df['Seed'] = df['Seed'].fillna(value='')
+    df_temp = df[['key', 'Place', 'Swimmer', 'Year', 'School', 'Gender',
+                  'Event', 'Seed', 'Final Time', 'Date', 'Class', 'full_results']]
+    df_temp['seed_check'] = df_temp['Seed'].apply(lambda x: len(x))
+    df_temp = df_temp[df_temp['seed_check'] > 1]
+    df_temp = df_temp.drop(columns='seed_check')
+    df['Seed'] = ''
+    df_temp['Final Time'] = ''
+    df_temp['Meet'] = 'State Seed'
+    df_combined = pd.concat([df_temp, df])
+    final_times = list(df_combined['Final Time'])
+    seed_times = list(df_combined['Seed'])
+    count = 0
+    swim_times = []
+    for item in final_times:
+        if len(item) > 0:
+            swim_times.append(item)
+        else:
+            swim_times.append(seed_times[count])
+        if len(item) > 1 and len(seed_times[count]) > 1:
+            print(item)
+            print(seed_times[count])
+        count += 1
+    df_combined['swim_time'] = swim_times
+    df_combined = df_combined.drop(columns=['Seed', 'Final Time'])
+
+    return df_combined
+
+
+def time_format(time_split):
+    try:
+        if len(time_split) == 0:
+            time_str_format = '2000-01-01 00:59:59.99'
+        elif (len(time_split) == 1) & (len(time_split[0]) == 0):
+            time_str_format = '2000-01-01 00:59:59.99'
+        elif (len(time_split) == 1) & (time_split[0] == ' '):
+            time_str_format = '2000-01-01 00:59:59.99'
+        elif (len(time_split) == 1) & (len(time_split[0]) > 0):
+            time_str_format = '2000-01-01 00:00:' + time_split[0]
+        else:
+            time_str_format = '2000-01-01 00:' + time_split[0] + ':' + time_split[1]
+        time_obj = pd.datetime.strptime(time_str_format, '%Y-%m-%d %H:%M:%S.%f')
+    except:
+        print(time_split)
+    return time_obj
+
+
+def process_times(df):
+    df[['50 Split', '100 Split', '150 Split', '200 Split', '250 Split',
+        '300 Split', '350 Split', '400 Split', '450 Split', '500 Split']] = \
+        df[['50 Split', '100 Split', '150 Split', '200 Split', '250 Split',
+            '300 Split', '350 Split', '400 Split', '450 Split', '500 Split']].fillna(value='')
+    df['time_cleanup'] = df['swim_time'].apply(lambda x: sub_chars(x))
+    df['time_obj'] = df['time_cleanup'].apply(lambda x: time_format(x.split(":")))
+    df['50 Split'] = df['50 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['100 Split'] = df['100 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['150 Split'] = df['150 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['200 Split'] = df['200 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['250 Split'] = df['250 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['300 Split'] = df['300 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['350 Split'] = df['350 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['400 Split'] = df['400 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['450 Split'] = df['450 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['500 Split'] = df['500 Split'].apply(lambda x: time_format(str(x).split(":")))
+    df['date_time'] = pd.to_datetime(df['Date'])
+    df['date_year'] = df['date_time'].map(lambda x: x.year)
+    return df
+
 
 # Cleanup and process the CSV files
 df_SV = cleanup_SV(df_SV_raw)
-df_State = cleanup_state(df_State_raw)
+df_state = cleanup_state(df_state_raw)
 
 df_SV.to_csv('data/swimming_data_processed.csv')
-df_State.to_csv('data/swimming_data_state_processed.csv')
+df_state.to_csv('data/swimming_data_state_processed.csv')
