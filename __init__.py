@@ -264,11 +264,15 @@ def filter_event(df, selected_event):
 
 
 # Create dictionaries for drop-down menus
-    
-unique_state_events = df_state['Event'].unique()
-state_events = []
-for event in unique_state_events:
-    state_events.append({'label': event, 'value': event})
+
+state_events = [{'label': '200 Free', 'value': '200 Yard Freestyle'},
+                {'label': '200 IM', 'value': '200 Yard IM'},
+                {'label': '50 Free', 'value': '50 Yard Freestyle'},
+                {'label': '100 Fly', 'value': '100 Yard Butterfly'},
+                {'label': '100 Free', 'value': '100 Yard Freestyle'},
+                {'label': '500 Free', 'value': '500 Yard Freestyle'},
+                {'label': '100 Back', 'value': '100 Yard Backstroke'},
+                {'label': '100 Breast', 'value': '100 Yard Breaststroke'}, ]
 
 gender = [{'label': 'M', 'value': 'M'},
           {'label': 'F', 'value': 'W'}]
