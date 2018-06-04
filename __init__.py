@@ -301,6 +301,12 @@ high_schools = []
 for high_school in unique_high_schools:
     high_schools.append({'label': high_school, 'value': high_school})
 
+unique_swimmer_names = df_state.Swimmer.unique()
+unique_swimmer_names.sort()
+swimmer_names = []
+for name in unique_swimmer_names:
+    swimmer_names.append({'label': name, 'value': name})
+
 
 #########################################################################
 #                       APP STRUCTURE                                   #
@@ -311,16 +317,17 @@ app.layout = html.Div([
         html.Div(
             dcc.Tabs(
                 tabs=[
-                    {'label': 'Individual Events', 'value': 1},
+                    {'label': 'Events - Overview', 'value': 1},
                     {'label': 'Reports by High School', 'value': 2},
-                    {'label': 'Relay Splits', 'value': 3},
+                    {'label': 'Reports by Swimmer', 'value': 3},
+                    {'label': 'Top Relay Splits', 'value': 4}
                 ],
                 value=1,
                 id='tabs',
                 vertical=vertical,
                 style={
-                    'width': '50%',
-                    'height': '50%',
+                    'width': '75%',
+                    'height': '75%',
                     'fontWeight': 'bold',
                     'padding': '10px',
                     'borderBottom': 'solid lightgrey',
@@ -505,12 +512,12 @@ def update_slider_max(selected_class):
 
 # Callback for table - Top Swimmers by event by high-school
 @app.callback(
-        dash.dependencies.Output('table-content', 'children'),
+        dash.dependencies.Output('high-school-table', 'children'),
         [dash.dependencies.Input('event-selection', 'value'),
          dash.dependencies.Input('gender-selection', 'value'),
          dash.dependencies.Input('high-school-selection', 'value'),
          dash.dependencies.Input('table-rows', 'value')])
-def update_table(selected_event, selected_gender, selected_highschool, table_rows):
+def update_highschool_table(selected_event, selected_gender, selected_highschool, table_rows):
     filtered_df_state = df_state[df_state['School'] == selected_highschool]
     filtered_df_state = filter_gender(filtered_df_state, selected_gender)
     filtered_df_state = filter_missing_times(filtered_df_state)
@@ -530,49 +537,33 @@ def update_table(selected_event, selected_gender, selected_highschool, table_row
     return generate_table(filtered_df_state, table_rows)
 
 
+# Callback for table - Top Swimmers by event by high-school
+@app.callback(
+        dash.dependencies.Output('swimmer-table', 'children'),
+        [dash.dependencies.Input('swimmer-selection', 'value')])
+def update_swimmer_table(selected_swimmer):
+    filtered_df_state = df_state[df_state['Swimmer'] == selected_swimmer]
+    filtered_df_state = filtered_df_state[['Event', 'Meet', 'Date', 'School', 'swim_time', '50 Split',
+                                           '100 Split', '150 Split', '200 Split']]
+    time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
+    filtered_df_state['50 Split'] = filtered_df_state['50 Split']\
+        .apply(lambda x: "" if x > time_cutoff else x.strftime('%M:%S.%f')[:-4])
+    filtered_df_state['100 Split'] = filtered_df_state['100 Split']\
+        .apply(lambda x: "" if x > time_cutoff else x.strftime('%M:%S.%f')[:-4])
+    filtered_df_state['150 Split'] = filtered_df_state['150 Split'] \
+        .apply(lambda x: "" if x > time_cutoff else x.strftime('%M:%S.%f')[:-4])
+    filtered_df_state['200 Split'] = filtered_df_state['200 Split'] \
+        .apply(lambda x: "" if x > time_cutoff else x.strftime('%M:%S.%f')[:-4])
+    filtered_df_state['Date'] = filtered_df_state['Date']\
+        .apply(lambda x: datetime.strptime(x, '%m/%d/%Y'))
+    filtered_df_state = filtered_df_state.sort_values('Date', ascending=False)
+    filtered_df_state = filtered_df_state.rename(columns={'swim_time': 'Time'})
+    return generate_table(filtered_df_state, max_rows=50)
+
+
 @app.callback(Output('tab-output', 'children'), [Input('tabs', 'value')])
 def display_tab_content(value):
-    if value == 2:
-        return html.Div([
-            html.Div([
-                html.Label('Event Select'),
-                dcc.Dropdown(
-                    id='event-selection',
-                    options=state_events,
-                    value='200 Yard Freestyle')],
-                style=dict(width='200px', display='table-cell', padding='5px', zIndex=1002),
-            ),
-            html.Div([
-                html.Label('Gender Select'),
-                dcc.Dropdown(
-                    id='gender-selection',
-                    options=gender,
-                    value='W')],
-                style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
-            ),
-            html.Div([
-                html.Label('High School Select'),
-                dcc.Dropdown(
-                    id='high-school-selection',
-                    placeholder='Type a high-school name...',
-                    options=high_schools,
-                    value='Alta High School')],
-                style=dict(width='250px', display='table-cell', padding='5px', zIndex=1002)
-            ),
-            html.Div([
-                dcc.RadioItems(
-                    id='table-rows',
-                    options=table_max_rows,
-                    value=10
-                )],
-                style=dict(padding='10px', verticalAlign='middle', display='table-cell')
-            ),
-            html.Div([
-                html.Div(id='table-content')],
-                style={'font-size': '12px'},
-            ),
-            ])
-    else:
+    if value == 1:  # Overview reports
         return html.Div([
             html.Div([
                 html.Label('Event'),
@@ -580,7 +571,7 @@ def display_tab_content(value):
                     id='event-selection',
                     options=state_events,
                     value='200 Yard Freestyle')],
-                style=dict(width='200px', display='table-cell', padding='5px', zIndex=1002),
+                style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
             ),
             html.Div([
                 html.Label('Gender'),
@@ -619,7 +610,7 @@ def display_tab_content(value):
             html.Div([
                 html.Label('Year Range',
                            style=dict(width='50%', verticalAlign='bottom',
-                                      padding='20px', display='inline-block'))]),
+                                      padding='20px', ))]),
             html.Div([
                 dcc.RangeSlider(
                     id='year-slider-selection',
@@ -629,6 +620,66 @@ def display_tab_content(value):
                 style=dict(width='50%', verticalAlign='bottom',
                            padding='20px', display='inline-block'))
         ])
+    elif value == 2:  # highschool reports
+        return html.Div(
+            className='ten columns',
+            children=[
+                html.Div([
+                    html.Label('Event'),
+                    dcc.Dropdown(
+                        id='event-selection',
+                        options=state_events,
+                        value='200 Yard Freestyle')],
+                    style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
+                ),
+                html.Div([
+                    html.Label('Gender'),
+                    dcc.Dropdown(
+                        id='gender-selection',
+                        options=gender,
+                        value='W')],
+                    style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
+                ),
+                html.Div([
+                    html.Label('High School'),
+                    dcc.Dropdown(
+                        id='high-school-selection',
+                        placeholder='Type a high-school name...',
+                        options=high_schools,
+                        value='Alta High School')],
+                    style=dict(width='250px', display='table-cell', padding='5px', zIndex=1002)
+                ),
+                html.Div([
+                    dcc.RadioItems(
+                        id='table-rows',
+                        options=table_max_rows,
+                        value=10
+                    )],
+                    style=dict(padding='10px', verticalAlign='middle', display='table-cell')
+                ),
+                html.Div([
+                    html.Div(id='high-school-table')],
+                    style={'font-size': '12px'},
+                ),
+            ])
+    elif value == 3:  # Individual Swimmer reports
+        return html.Div([
+            html.Div([
+                html.Label('Swimmer Name'),
+                dcc.Dropdown(
+                    id='swimmer-selection',
+                    placeholder='Type a name: Last, First...',
+                    options=swimmer_names,
+                    value='')],
+                style=dict(width='250px', display='table-cell', padding='5px', zIndex=1002)
+            ),
+            html.Div([
+                html.Div(id='swimmer-table')],
+                style={'font-size': '12px'},
+            ),
+        ])
+    else:
+        return html.Div([])
 
 
 # Launch App
