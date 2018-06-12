@@ -145,20 +145,17 @@ def reshape_seed(df):
 
 
 def time_format(time_split):
-    try:
-        if len(time_split) == 0:
-            time_str_format = '2000-01-01 00:59:59.99'
-        elif (len(time_split) == 1) & (len(time_split[0]) == 0):
-            time_str_format = '2000-01-01 00:59:59.99'
-        elif (len(time_split) == 1) & (time_split[0] == ' '):
-            time_str_format = '2000-01-01 00:59:59.99'
-        elif (len(time_split) == 1) & (len(time_split[0]) > 0):
-            time_str_format = '2000-01-01 00:00:' + time_split[0]
-        else:
-            time_str_format = '2000-01-01 00:' + time_split[0] + ':' + time_split[1]
-        time_obj = pd.datetime.strptime(time_str_format, '%Y-%m-%d %H:%M:%S.%f')
-    except:
-        print(time_split)
+    if len(time_split) == 0:
+        time_str_format = '2000-01-01 00:59:59.99'
+    elif (len(time_split) == 1) & (len(time_split[0]) == 0):
+        time_str_format = '2000-01-01 00:59:59.99'
+    elif (len(time_split) == 1) & (time_split[0] == ' '):
+        time_str_format = '2000-01-01 00:59:59.99'
+    elif (len(time_split) == 1) & (len(time_split[0]) > 0):
+        time_str_format = '2000-01-01 00:00:' + time_split[0]
+    else:
+        time_str_format = '2000-01-01 00:' + time_split[0] + ':' + time_split[1]
+    time_obj = pd.datetime.strptime(time_str_format, '%Y-%m-%d %H:%M:%S.%f')
     return time_obj
 
 

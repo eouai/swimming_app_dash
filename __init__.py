@@ -48,7 +48,7 @@ headers = ['Unnamed: 0', '100 Split', '150 Split', '200 Split', '250 Split',
            '500 Split', 'Class', 'Date', 'Event', 'Gender', 'Meet', 'Place',
            'Points', 'Previous record', 'School', 'Swimmer', 'Year',
            'full_results', 'key', 'relay_position', 'swim_time', 'time_cleanup',
-           'time_obj', 'date_time', 'date_year']
+           'time_obj', 'date_time', 'date_year', 'swim_year']
 dtypes = {'Unnamed: 0': 'int', '100 Split': 'str', '150 Split': 'str', '200 Split': 'str',
           '250 Split': 'str', '300 Split': 'str', '350 Split': 'str', '400 Split': 'str',
           '450 Split': 'str', '50 Split': 'str', '500 Split': 'str', 'Class': 'str',
@@ -56,8 +56,9 @@ dtypes = {'Unnamed: 0': 'int', '100 Split': 'str', '150 Split': 'str', '200 Spli
           'Points': 'str', 'Previous record': 'str', 'School': 'str', 'Swimmer': 'str',
           'Year': 'str', 'full_results': 'bool', 'key': 'int', 'relay_position': 'str',
           'swim_time': 'str', 'time_cleanup': 'str', 'time_obj': 'str', 'date_time': 'str',
-          'date_year': 'int'}
+          'date_year': 'int', 'swim_year': 'int'}
 df_state = pd.read_csv('data/swimming_data_state_processed.csv', dtype=dtypes)
+df_seeds = pd.read_csv('data/swimming_data_seeds_processed.csv')
 df_state['time_obj'] = lookup(df_state['time_obj'])
 df_state['100 Split'] = lookup(df_state['100 Split'])
 df_state['150 Split'] = lookup(df_state['150 Split'])
@@ -69,6 +70,7 @@ df_state['400 Split'] = lookup(df_state['400 Split'])
 df_state['450 Split'] = lookup(df_state['450 Split'])
 df_state['500 Split'] = lookup(df_state['500 Split'])
 df_state['50 Split'] = lookup(df_state['50 Split'])
+df_seeds['time_obj'] = lookup(df_seeds['time_obj'])
 
 
 #################################################
@@ -78,17 +80,17 @@ df_state['50 Split'] = lookup(df_state['50 Split'])
 def generate_hover_text(df, place, all_classes_selected, all_meets_selected):
     min_y_count = get_finals_y_count(df)
     if place > min_y_count:
-        names = df.sort_values(['date_year', 'time_obj'], ascending=[False, True])\
-            .groupby('date_year')['Swimmer'].last()
-        times = df.sort_values(['date_year', 'time_obj'], ascending=[False, True])\
-            .groupby('date_year')['time_obj'].last()
+        names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
+            .groupby('swim_year')['Swimmer'].last()
+        times = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
+            .groupby('swim_year')['time_obj'].last()
         times = [time.strftime('%M:%S.%f')[:-4] for time in times]
         hover_text = names.str.cat(times, sep=' ')
     else:
-        names = df.sort_values(['date_year', 'time_obj'], ascending=[False, True])\
-            .groupby('date_year')['Swimmer'].nth(place)
-        times = df.sort_values(['date_year', 'time_obj'], ascending=[False, True])\
-            .groupby('date_year')['time_obj'].nth(place)
+        names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
+            .groupby('swim_year')['Swimmer'].nth(place)
+        times = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
+            .groupby('swim_year')['time_obj'].nth(place)
         times = [time.strftime('%M:%S.%f')[:-4] for time in times]
         hover_text = names.str.cat(times, sep=' ')
     if all_classes_selected:
@@ -97,61 +99,59 @@ def generate_hover_text(df, place, all_classes_selected, all_meets_selected):
         hover_text = hover_text + ': ' + generate_meet_name(df, place)
         hover_text = hover_text + ' ' + generate_event_name(df, place)
         for i, row in hover_text.iteritems():
-            if 'Relay' in row:
-                hover_text.replace(row, row + ' (lead-off)', inplace=True)
+            try:
+                if 'Relay' in row:
+                    hover_text.replace(row, row + ' (lead-off)', inplace=True)
+            except:
+                print(row)
     return hover_text
 
 
 def generate_class_hover_text(df, place):
     hover_text = df.sort_values(
-        ['date_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('date_year')[['Class']].nth(place)['Class'].sort_index(ascending=True)
+        ['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')[['Class']].nth(place)['Class'].sort_index(ascending=True)
     return hover_text
 
 
 def generate_meet_name(df, place):
     hover_text = df.sort_values(
-        ['date_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('date_year')[['Meet']].nth(place)['Meet'].sort_index(ascending=True)
+        ['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')[['Meet']].nth(place)['Meet'].sort_index(ascending=True)
     return hover_text
 
 
 def generate_event_name(df, place):
     hover_text = df.sort_values(
-        ['date_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('date_year')[['Event']].nth(place)['Event'].sort_index(ascending=True)
+        ['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')[['Event']].nth(place)['Event'].sort_index(ascending=True)
     return hover_text
 
 
 def generate_y_data(df, place):
     min_y_count = get_finals_y_count(df)
     if place > min_y_count:
-        y_data = df.sort_values('time_obj').groupby('date_year').time_obj.last()
+        y_data = df.sort_values('time_obj').groupby('swim_year').time_obj.last()
     else:
-        y_data = df.sort_values('time_obj').groupby('date_year').time_obj.nth(place)
+        y_data = df.sort_values('time_obj').groupby('swim_year').time_obj.nth(place)
 
     return y_data
 
 
 def get_finals_y_count(df):
     return int(df.sort_values('time_obj').groupby(
-        'date_year').time_obj.count().min()) - 1
+        'swim_year').time_obj.count().min()) - 1
 
 
-def generate_y_axis_max(df, df_seeds, all_classes_selected, selected_event):
-    min_y_count = get_finals_y_count(df)
-    min_y_count2 = get_finals_y_count(df_seeds)
+def generate_y_axis_max(df, seeds, all_classes_selected, selected_event):
+    min_y_count = [get_finals_y_count(df) if get_finals_y_count(df) < 16 else 15]
     if all_classes_selected:
-        if min_y_count > 15:
-            min_y_count = 15
-        y_axis_max = df.sort_values('time_obj').groupby('date_year')\
+        y_axis_max = df.sort_values('time_obj').groupby('swim_year')\
             .time_obj.nth(min_y_count).max() + timedelta(seconds=2)
     else:
-        min_y_count = min(min_y_count, min_y_count2)
-        finals_max = df.sort_values('time_obj').groupby('date_year')\
+        finals_max = df.sort_values('time_obj').groupby('swim_year')\
             .time_obj.nth(min_y_count).max()
-        seed_max = df_seeds.sort_values('time_obj').groupby('date_year')\
-            .time_obj.nth(min_y_count).max()
+        seed_max = seeds.time_obj.max()
         y_axis_max = max(finals_max, seed_max) + timedelta(seconds=2)
     if selected_event == '50 Yard Freestyle':
         y_axis_max = y_axis_max - timedelta(seconds=1.75)
@@ -159,21 +159,21 @@ def generate_y_axis_max(df, df_seeds, all_classes_selected, selected_event):
 
 
 def generate_y_axis_min(df, selected_event):
-    y_axis_min = df.sort_values('time_obj').groupby('date_year')\
+    y_axis_min = df.sort_values('time_obj').groupby('swim_year')\
                      .time_obj.nth(0).min() - timedelta(seconds=1)
     if selected_event == '50 Yard Freestyle':
         y_axis_min = y_axis_min + timedelta(seconds=.25)
     return y_axis_min
 
 
-def generate_legend_name(place, all_classes_selected, selected_class):
-    if all_classes_selected:
+def generate_legend_name(place, all_classes_selected, selected_class, all_meets_selected):
+    if all_classes_selected or all_meets_selected:
         if place == 0:
-            return 'Fastest Overall State Time'
+            return 'Fastest Overall Time'
         elif place == 7:
-            return '8th Fastest Overall Time'
+            return '8th Fastest Time'
         else:
-            return '16th Fastest Overall Time'
+            return '16th Fastest Time'
     else:
         if place == 0:
             return str(selected_class) + ' State Champion'
@@ -197,7 +197,7 @@ def filter_slider_df(df, selected_class):
 def get_slider_years_range(df):
     time_cutoff = datetime.strptime('2000-01-01 00:12:00.00', '%Y-%m-%d %H:%M:%S.%f')
     df = df[df['time_obj'] < time_cutoff]
-    years = np.sort(df['date_year'].unique()).astype('int')
+    years = np.sort(df['swim_year'].unique()).astype('int')
     return years
 
 
@@ -209,12 +209,14 @@ def filter_gender(df, selected_gender):
 def filter_class(df, selected_class):
     if selected_class == 'All Classes':
         selected_class = ['6A', '5A', '4A', '3A', '2A']
-        all_classes_selected = True
     else:
         selected_class = [selected_class]
-        all_classes_selected = False
     df = df[df['Class'].isin(selected_class)]
-    return df, all_classes_selected
+    return df
+
+
+def set_all_classes_selected(selected_class):
+    return selected_class == 'All Classes'
 
 
 def filter_years(df, year_range):
@@ -230,36 +232,37 @@ def filter_missing_times(df):
 
 
 def filter_duplicates(df):
-    df = df.sort_values(['date_year', 'time_obj'], ascending=[False, True])\
-        .drop_duplicates(['date_year', 'Swimmer'])
+    df = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
+        .drop_duplicates(['swim_year', 'Swimmer'])
     return df
 
 
-def filter_meets_and_event(df, selected_event, selected_meets):
-    df_seeds = df[df['Meet'] == 'State Seed']
-    df_seeds = df_seeds[df_seeds['Event'] == selected_event]
-
+def filter_meets_and_event(df, seeds, selected_event, selected_meets):
+    seeds = seeds[seeds['Event'] == selected_event]
     if selected_meets == 'State Finals':
         df = df[df['Meet'] == 'State Finals']
-        df = df[df['Event'] == selected_event]
+        df = filter_finals_only_event(df, selected_event)
         all_meets_selected = False
     else:
+        df1 = filter_finals_only_event(df, selected_event)
+        df2 = filter_relays_as_individual_swim_event(df, selected_event)
+        df = pd.concat([df1, df2])
         all_meets_selected = True
-        df = filter_event(df, selected_event)
-    return df, df_seeds, all_meets_selected
+    return df, seeds, all_meets_selected
 
 
-def filter_event(df, selected_event):
+def filter_finals_only_event(df, selected_event):
+    df = df[df['Event'] == selected_event]
+    return df
+
+
+def filter_relays_as_individual_swim_event(df, selected_event):
     if selected_event == '50 Yard Freestyle':
-        df1 = df[df['Event'] == selected_event]
-        df2 = df[(df['Event'] == '200 Yard Freestyle Relay') & (df['relay_position'] == '1.0')]
-        df = pd.concat([df1, df2])
+        df = df[(df['Event'] == '200 Yard Freestyle Relay') & (df['relay_position'] == '1.0')]
     elif selected_event == '100 Yard Freestyle':
-        df1 = df[df['Event'] == selected_event]
-        df2 = df[(df['Event'] == '400 Yard Freestyle Relay') & (df['relay_position'] == '1.0')]
-        df = pd.concat([df1, df2])
+        df = df[(df['Event'] == '400 Yard Freestyle Relay') & (df['relay_position'] == '1.0')]
     else:
-        df = df[df['Event'] == selected_event]
+        df = df[df['Event'] == 'No Relays']  # Ugly way of creating an empty dataframe
     return df
 
 
@@ -350,7 +353,7 @@ app.layout = html.Div([
 #                 GRAPH AND TABLE DATA AND SETTINGS                      #
 ##########################################################################
 
-def generate_figure(df, df_seeds, y_axis_min, y_axis_max, selected_event,
+def generate_figure(df, seeds, y_axis_min, y_axis_max, selected_event,
                     selected_class, all_classes_selected, year_range, all_meets_selected):
     return {
         'data': [
@@ -360,7 +363,7 @@ def generate_figure(df, df_seeds, y_axis_min, y_axis_max, selected_event,
                 y=generate_y_data(df, 0),
                 text=generate_hover_text(df, 0, all_classes_selected, all_meets_selected),
                 mode='lines+markers',
-                name=generate_legend_name(0, all_classes_selected, selected_class),
+                name=generate_legend_name(0, all_classes_selected, selected_class, all_meets_selected),
                 hoverinfo='text',
                 marker=dict(size=10),
                 line=dict(shape='spline')
@@ -371,7 +374,7 @@ def generate_figure(df, df_seeds, y_axis_min, y_axis_max, selected_event,
                 y=generate_y_data(df, 7),
                 text=generate_hover_text(df, 7, all_classes_selected, all_meets_selected),
                 mode='lines+markers',
-                name=generate_legend_name(7, all_classes_selected, selected_class),
+                name=generate_legend_name(7, all_classes_selected, selected_class, all_meets_selected),
                 hoverinfo='text',
                 marker=dict(size=10),
                 line=dict(shape='spline')
@@ -382,7 +385,7 @@ def generate_figure(df, df_seeds, y_axis_min, y_axis_max, selected_event,
                 y=generate_y_data(df, 15),
                 text=generate_hover_text(df, 15, all_classes_selected, all_meets_selected),
                 mode='lines+markers',
-                name=generate_legend_name(15, all_classes_selected, selected_class),
+                name=generate_legend_name(15, all_classes_selected, selected_class, all_meets_selected),
                 hoverinfo='text',
                 marker=dict(size=10),
                 line=dict(shape='spline')
@@ -390,11 +393,10 @@ def generate_figure(df, df_seeds, y_axis_min, y_axis_max, selected_event,
             # Spline Graph for slowest qualifying time for State in the event
             go.Scatter(
                 x=np.arange(year_range[0], year_range[1] + 1, 1) if not all_classes_selected else [],
-                y=(df_seeds.groupby('date_year').time_obj.agg('max')
+                y=(seeds.groupby('date_year').time_obj.agg('max')
                    if not all_classes_selected else []),
-                text=((df_seeds.sort_values(['date_year', 'time_obj'], ascending=[False, False])
-                       .groupby('date_year')[['Swimmer', 'time_obj']].head(1)['time_obj']
-                       .apply(lambda x: x.strftime('%M:%S.%f')[:-4]).sort_index(ascending=False))
+                text=((seeds.sort_values('date_year', ascending=True).time_obj
+                       .apply(lambda x: x.strftime('%M:%S.%f')[:-4]))
                       if not all_classes_selected else ""),
                 mode='lines+markers',
                 name='State Qualifying Time',
@@ -443,18 +445,26 @@ def generate_table(df, max_rows=10):
 def update_figure(selected_event, selected_gender, selected_class, year_range, selected_meets):
     filtered_df_state = df_state[df_state['full_results']]
     filtered_df_state = filter_gender(filtered_df_state, selected_gender)
-    filtered_df_state, all_classes_selected = filter_class(filtered_df_state, selected_class)
+    filtered_df_state = filter_class(filtered_df_state, selected_class)
     filtered_df_state = filter_years(filtered_df_state, year_range)
     filtered_df_state = filter_missing_times(filtered_df_state)
-    filtered_df_state, filtered_df_state_seeds, all_meets_selected = \
-        filter_meets_and_event(filtered_df_state, selected_event, selected_meets)
+
+    filtered_df_seeds = df_seeds
+    filtered_df_seeds = filter_gender(filtered_df_seeds, selected_gender)
+    filtered_df_seeds = filter_class(filtered_df_seeds, selected_class)
+    filtered_df_seeds = filter_years(filtered_df_seeds, year_range)
+
+    all_classes_selected = set_all_classes_selected(selected_class)
+
+    filtered_df_state, filtered_df_seeds, all_meets_selected = \
+        filter_meets_and_event(filtered_df_state, filtered_df_seeds, selected_event, selected_meets)
     filtered_df_state = filter_duplicates(filtered_df_state)
 
     y_axis_min = generate_y_axis_min(filtered_df_state, selected_event)
-    y_axis_max = generate_y_axis_max(filtered_df_state, filtered_df_state_seeds,
+    y_axis_max = generate_y_axis_max(filtered_df_state, filtered_df_seeds,
                                      all_classes_selected, selected_event)
 
-    return generate_figure(filtered_df_state, filtered_df_state_seeds, y_axis_min,
+    return generate_figure(filtered_df_state, filtered_df_seeds, y_axis_min,
                            y_axis_max, selected_event, selected_class, all_classes_selected,
                            year_range, all_meets_selected)
 
@@ -521,16 +531,17 @@ def update_highschool_table(selected_event, selected_gender, selected_highschool
     filtered_df_state = df_state[df_state['School'] == selected_highschool]
     filtered_df_state = filter_gender(filtered_df_state, selected_gender)
     filtered_df_state = filter_missing_times(filtered_df_state)
-    filtered_df_state = filter_event(filtered_df_state, selected_event)
+    filtered_df_state = pd.concat([filter_finals_only_event(filtered_df_state, selected_event),
+                                   filter_relays_as_individual_swim_event(filtered_df_state, selected_event)])
 
     filtered_df_state = filtered_df_state.sort_values(['time_obj', 'Swimmer'])\
         .drop_duplicates('Swimmer')
-    filtered_df_state = filtered_df_state[['Swimmer', 'Event', 'Meet', 'time_obj', 'date_year']]
+    filtered_df_state = filtered_df_state[['Swimmer', 'Event', 'Meet', 'time_obj', 'swim_year']]
     filtered_df_state['time_obj'] = filtered_df_state['time_obj']\
         .apply(lambda x: x.strftime('%M:%S.%f')[:-4])
     filtered_df_state['Event'] = filtered_df_state['Event']\
         .apply(lambda x: x + ' (lead-off)' if 'Relay' in x else x)
-    filtered_df_state = filtered_df_state.rename(columns={'date_year': 'Date',
+    filtered_df_state = filtered_df_state.rename(columns={'swim_year': 'Date',
                                                           'time_obj': 'Best Time'})
     filtered_df_state.insert(0, 'Rank', range(1, len(filtered_df_state)+1))
 
