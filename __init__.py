@@ -268,6 +268,7 @@ def filter_relays_as_individual_swim_event(df, selected_event):
 
 # Create dictionaries for drop-down menus
 
+
 state_events = [{'label': '200 Free', 'value': '200 Yard Freestyle'},
                 {'label': '200 IM', 'value': '200 Yard IM'},
                 {'label': '50 Free', 'value': '50 Yard Freestyle'},
@@ -296,7 +297,7 @@ finals_or_overall = [{'label': 'Display Results from State Finals ONLY', 'value'
                      ]
 
 table_max_rows = [{'label': 'Display top 10', 'value': 10},
-                  {'label': 'Display top 20', 'value': 20}]
+                  {'label': 'Display top 25', 'value': 25}]
 
 unique_high_schools = df_state.School.unique()
 unique_high_schools.sort()
@@ -304,7 +305,12 @@ high_schools = []
 for high_school in unique_high_schools:
     high_schools.append({'label': high_school, 'value': high_school})
 
-unique_swimmer_names = df_state.Swimmer.unique()
+individual_events = []
+for event in state_events:
+    individual_events.append(list(event.values())[1])
+
+df_names = df_state[df_state['Event'].isin(individual_events)]
+unique_swimmer_names = df_names.Swimmer.unique()
 unique_swimmer_names.sort()
 swimmer_names = []
 for name in unique_swimmer_names:
@@ -619,17 +625,14 @@ def display_tab_content(value):
                                                        'toggleSpikelines', 'zoom2d']})
             ]),
             html.Div([
-                html.Label('Year Range',
-                           style=dict(width='50%', verticalAlign='bottom',
-                                      padding='20px', ))]),
-            html.Div([
+                html.Label('Year Range'),
                 dcc.RangeSlider(
                     id='year-slider-selection',
                     step=None,
                     allowCross=False,
                 )],
-                style=dict(width='50%', verticalAlign='bottom',
-                           padding='20px', display='inline-block'))
+                style=dict(width='60%', verticalAlign='bottom',
+                           padding='20px', ))  # , display='inline-block'
         ])
     elif value == 2:  # highschool reports
         return html.Div(
