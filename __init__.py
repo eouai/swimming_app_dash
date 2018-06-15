@@ -415,11 +415,12 @@ def generate_figure(df, seeds, y_axis_min, y_axis_max, selected_event,
             title='%s State Finals Times by Year - %s' % (selected_event, selected_class),
             yaxis={'title': 'Times', 'range': [y_axis_max, y_axis_min],
                    'tickformat': '%M:%S.%2f'},
-            xaxis={'title': 'Year', 'dtick': 1},
+            xaxis={'dtick': 1},
             hovermode='closest',
             hoverlabel=dict(bgcolor='white', font=dict(size=18)),
             height=500,
-            dragmode='pan'
+            dragmode='pan',
+            margin=dict(b=30)
             )
       }
 
@@ -587,8 +588,9 @@ def display_tab_content(value):
                 dcc.Dropdown(
                     id='event-selection',
                     options=state_events,
-                    value='200 Yard Freestyle')],
-                style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
+                    value='200 Yard Freestyle'
+                    )],
+                style=dict(width='150px', display='inline-block', padding='5px', zIndex=1002),
             ),
             html.Div([
                 html.Label('Gender'),
@@ -597,7 +599,7 @@ def display_tab_content(value):
                     options=gender,
                     value='W'
                     )],
-                style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
+                style=dict(width='100px', display='inline-block', padding='5px', zIndex=1002),
             ),
             html.Div([
                 html.Label('Class'),
@@ -606,15 +608,16 @@ def display_tab_content(value):
                     options=classes,
                     value='All Classes'
                     )],
-                style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
+                style=dict(width='150px', display='inline-block', padding='5px', zIndex=1002),
             ),
             html.Div([
+                html.Label(''),
                 dcc.RadioItems(
                     id='meet-selection',
                     options=finals_or_overall,
                     value='State Finals'
                     )],
-                style=dict(fontWeight='bold')
+                style=dict(display='inline-block', padding='5px', verticalAlign='bottom')
             ),
             html.Div([
                 dcc.Graph(
@@ -631,7 +634,7 @@ def display_tab_content(value):
                     step=None,
                     allowCross=False,
                 )],
-                style=dict(width='60%', verticalAlign='bottom',
+                style=dict(width='60%', verticalAlign='bottom', fontWeight='bold',
                            padding='20px', ))  # , display='inline-block'
         ])
     elif value == 2:  # highschool reports
@@ -644,7 +647,7 @@ def display_tab_content(value):
                         id='event-selection',
                         options=state_events,
                         value='200 Yard Freestyle')],
-                    style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
+                    style=dict(width='150px', display='inline-block', padding='5px', zIndex=1002),
                 ),
                 html.Div([
                     html.Label('Gender'),
@@ -652,7 +655,7 @@ def display_tab_content(value):
                         id='gender-selection',
                         options=gender,
                         value='W')],
-                    style=dict(width='150px', display='table-cell', padding='5px', zIndex=1002),
+                    style=dict(width='100px', display='inline-block', padding='5px', zIndex=1002),
                 ),
                 html.Div([
                     html.Label('High School'),
@@ -661,7 +664,7 @@ def display_tab_content(value):
                         placeholder='Type a high-school name...',
                         options=high_schools,
                         value='Alta High School')],
-                    style=dict(width='250px', display='table-cell', padding='5px', zIndex=1002)
+                    style=dict(width='250px', display='inline-block', padding='5px', zIndex=1002)
                 ),
                 html.Div([
                     dcc.RadioItems(
@@ -669,7 +672,7 @@ def display_tab_content(value):
                         options=table_max_rows,
                         value=10
                     )],
-                    style=dict(padding='10px', verticalAlign='middle', display='table-cell')
+                    style=dict(display='inline-block', padding='5px', verticalAlign='bottom')
                 ),
                 html.Div([
                     html.Div(id='high-school-table')],
