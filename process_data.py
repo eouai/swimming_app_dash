@@ -151,6 +151,8 @@ def time_format(time_split):
         time_str_format = '2000-01-01 00:59:59.99'
     elif (len(time_split) == 1) & (time_split[0] == ' '):
         time_str_format = '2000-01-01 00:59:59.99'
+    elif (len(time_split) == 1) & (time_split[0] == 'DQ'):
+        time_str_format = '2000-01-01 00:59:59.99'
     elif (len(time_split) == 1) & (len(time_split[0]) > 0):
         time_str_format = '2000-01-01 00:00:' + time_split[0]
     else:

@@ -24,6 +24,7 @@ import plotly.graph_objs as go
 # Create app and designate app settings
 app = dash.Dash()
 app.config.supress_callback_exceptions = True
+app.title = 'Utah High-School State Swimming Records'
 server = app.server
 
 # Define variables
@@ -78,83 +79,149 @@ df_seeds['time_obj'] = lookup(df_seeds['time_obj'])
 #################################################
 
 def generate_hover_text(df, place, all_classes_selected, all_meets_selected):
-    min_y_count = get_finals_y_count(df)
-    if place > min_y_count:
-        names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
-            .groupby('swim_year')['Swimmer'].last()
-        times = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
-            .groupby('swim_year')['time_obj'].last()
-        times = [time.strftime('%M:%S.%f')[:-4] for time in times]
-        hover_text = names.str.cat(times, sep=' ')
-    else:
-        names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
-            .groupby('swim_year')['Swimmer'].nth(place)
-        times = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True])\
-            .groupby('swim_year')['time_obj'].nth(place)
-        times = [time.strftime('%M:%S.%f')[:-4] for time in times]
-        hover_text = names.str.cat(times, sep=' ')
-    if all_classes_selected:
-        hover_text = hover_text + ' - ' + generate_class_hover_text(df, place)
-    if all_meets_selected:
-        hover_text = hover_text + ': ' + generate_meet_name(df, place)
-        hover_text = hover_text + ' ' + generate_event_name(df, place)
-        for i, row in hover_text.iteritems():
-            try:
-                if 'Relay' in row:
-                    hover_text.replace(row, row + ' (lead-off)', inplace=True)
-            except:
-                print(row)
+    min_y_counts = get_finals_y_count(df)
+    i = 0
+    hover_text = pd.Series()
+    for y_count in min_y_counts:
+        if place > y_count:
+            swimmer_name, swimmer_time, class_text, meet_name, event_name, relay_position = \
+                get_nth_result(df, y_count, i)
+            append_text = swimmer_name + ' ' + swimmer_time + ' ' + \
+                str([class_text if all_classes_selected else ''][0]) + \
+                str([': ' + meet_name if all_meets_selected else ''][0]) + \
+                str([' ' + event_name if all_meets_selected else ''][0]) + \
+                str([' (lead-off)' if all_meets_selected & (relay_position == '1.0') &
+                    ('Relay' in event_name) else ''][0])
+            hover_text.at[i] = append_text
+        else:
+            swimmer_name, swimmer_time, class_text, meet_name, event_name, relay_position = \
+                get_nth_result(df, place, i)
+            append_text = swimmer_name + ' ' + swimmer_time + ' ' + \
+                str([class_text if all_classes_selected else ''][0]) + \
+                str([': ' + meet_name if all_meets_selected else ''][0]) + \
+                str([' ' + event_name if all_meets_selected else ''][0]) + \
+                str([' (lead-off)' if all_meets_selected & (relay_position == '1.0') &
+                    ('Relay' in event_name) else ''][0])
+            hover_text.at[i] = append_text
+        i += 1
     return hover_text
 
 
-def generate_class_hover_text(df, place):
-    hover_text = df.sort_values(
-        ['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')[['Class']].nth(place)['Class'].sort_index(ascending=True)
-    return hover_text
+def get_nth_result(df, place, i):
+    names = get_nth_names(df, place)
+    times = get_nth_times(df, place)
+    classes_text = get_nth_class(df, place)
+    meet_names = get_meet_name(df, place)
+    event_names = get_event_name(df, place)
+    relay_positions = get_relay_position(df, place)
+    times = [time.strftime('%M:%S.%f')[:-4] for time in times]
+    swimmer_name = names.iloc[i]
+    swimmer_time = times[i]
+    class_text = classes_text.iloc[i]
+    meet_name = meet_names.iloc[i]
+    event_name = event_names.iloc[i]
+    relay_position = relay_positions.iloc[i]
+    return swimmer_name, swimmer_time, class_text, meet_name, event_name, relay_position
 
 
-def generate_meet_name(df, place):
-    hover_text = df.sort_values(
-        ['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')[['Meet']].nth(place)['Meet'].sort_index(ascending=True)
-    return hover_text
+def get_nth_names(df, place):
+    names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')['Swimmer'].nth(place)
+    return names
 
 
-def generate_event_name(df, place):
-    hover_text = df.sort_values(
-        ['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')[['Event']].nth(place)['Event'].sort_index(ascending=True)
-    return hover_text
+def get_nth_times(df, place):
+    times = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')['time_obj'].nth(place)
+    return times
 
 
-def generate_y_data(df, place):
-    min_y_count = get_finals_y_count(df)
-    if place > min_y_count:
-        y_data = df.sort_values('time_obj').groupby('swim_year').time_obj.last()
-    else:
-        y_data = df.sort_values('time_obj').groupby('swim_year').time_obj.nth(place)
+def get_nth_class(df, place):
+    the_classes = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')['Class'].nth(place)
+    return the_classes
 
+
+def get_meet_name(df, place):
+    meet_names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')['Meet'].nth(place)
+    return meet_names
+
+
+def get_event_name(df, place):
+    event_names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')['Event'].nth(place)
+    return event_names
+
+
+def get_relay_position(df, place):
+    relay_positions = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')['relay_position'].nth(place)
+    return relay_positions
+
+
+def get_swim_time(df, place):
+    swim_times = df.sort_values('time_obj').groupby('swim_year').time_obj.nth(place)
+    return swim_times
+
+
+def generate_y_data(df, place, year_range):
+    min_y_counts = get_finals_y_count(df)
+    y_data = df.sort_values('time_obj').groupby('swim_year').time_obj.nth(0)
+    i = year_range[0]
+    j = 0
+    for y_count in min_y_counts:
+        if place > y_count:
+            swim_times = get_swim_time(df, y_count)
+            swim_time = swim_times.iloc[j]
+            y_data.at[i] = swim_time
+        else:
+            swim_times = get_swim_time(df, place)
+            swim_time = swim_times.iloc[j]
+            y_data.at[i] = swim_time
+        i += 1
+        j += 1
     return y_data
 
 
 def get_finals_y_count(df):
-    return int(df.sort_values('time_obj').groupby(
-        'swim_year').time_obj.count().min()) - 1
+    min_y_counts = list(df.sort_values('time_obj').groupby(
+        'swim_year').time_obj.count())
+    for i in range(len(min_y_counts)):
+        min_y_counts[i] = min_y_counts[i] - 1
+    return min_y_counts
 
 
 def generate_y_axis_max(df, seeds, all_classes_selected, selected_event):
-    min_y_count = [get_finals_y_count(df) if get_finals_y_count(df) < 16 else 15]
-    if all_classes_selected:
-        y_axis_max = df.sort_values('time_obj').groupby('swim_year')\
-            .time_obj.nth(min_y_count).max() + timedelta(seconds=2)
-    else:
-        finals_max = df.sort_values('time_obj').groupby('swim_year')\
-            .time_obj.nth(min_y_count).max()
-        seed_max = seeds.time_obj.max()
-        y_axis_max = max(finals_max, seed_max) + timedelta(seconds=2)
+    min_y_counts = get_finals_y_count(df)
+    y_axis_max = df.sort_values('time_obj')\
+        .groupby('swim_year').time_obj.nth(15).max()
+    seed_max = seeds.time_obj.max()
+    for y_count in min_y_counts:
+        if 15 > y_count:
+            if all_classes_selected:
+                temp_y = df.sort_values('time_obj').groupby('swim_year')\
+                    .time_obj.nth(y_count).max()
+                if temp_y > y_axis_max: y_axis_max = temp_y
+            else:
+                temp_y = df.sort_values('time_obj').groupby('swim_year')\
+                    .time_obj.nth(y_count).max()
+                if temp_y > y_axis_max: y_axis_max = temp_y
+                y_axis_max = max(y_axis_max, seed_max)
+        else:
+            if all_classes_selected:
+                temp_y = df.sort_values('time_obj').groupby('swim_year') \
+                    .time_obj.nth(15).max()
+                if temp_y > y_axis_max: y_axis_max = temp_y
+            else:
+                temp_y = df.sort_values('time_obj').groupby('swim_year') \
+                    .time_obj.nth(15).max()
+                if temp_y > y_axis_max: y_axis_max = temp_y
+                y_axis_max = max(y_axis_max, seed_max)
     if selected_event == '50 Yard Freestyle':
-        y_axis_max = y_axis_max - timedelta(seconds=1.75)
+        y_axis_max = y_axis_max + timedelta(seconds=0.25)
+    else:
+        y_axis_max = y_axis_max + timedelta(seconds=2.00)
     return y_axis_max
 
 
@@ -162,7 +229,7 @@ def generate_y_axis_min(df, selected_event):
     y_axis_min = df.sort_values('time_obj').groupby('swim_year')\
                      .time_obj.nth(0).min() - timedelta(seconds=1)
     if selected_event == '50 Yard Freestyle':
-        y_axis_min = y_axis_min + timedelta(seconds=.25)
+        y_axis_min = y_axis_min + timedelta(seconds=.75)
     return y_axis_min
 
 
@@ -237,22 +304,52 @@ def filter_duplicates(df):
     return df
 
 
+def ind_relay_lookup(selected_event):
+    return selected_event in relay_events.keys()
+
+
+def team_relay_lookup(selected_event):
+    return selected_event in team_relays.keys()
+
+
 def filter_meets_and_event(df, seeds, selected_event, selected_meets):
+    relay_split = ind_relay_lookup(selected_event)
+    team_relay = team_relay_lookup(selected_event)
+    if team_relay:
+        df = df[~df['relay_position'].isin(relay_positions)]
     seeds = seeds[seeds['Event'] == selected_event]
     if selected_meets == 'State Finals':
         df = df[df['Meet'] == 'State Finals']
-        df = filter_finals_only_event(df, selected_event)
+        if relay_split:
+            df = filter_relay_splits(df, selected_event)
+        else:
+            df = filter_finals_only_event(df, selected_event)
         all_meets_selected = False
     else:
-        df1 = filter_finals_only_event(df, selected_event)
-        df2 = filter_relays_as_individual_swim_event(df, selected_event)
-        df = pd.concat([df1, df2])
+        if relay_split:
+            df = filter_relay_splits(df, selected_event)
+        else:
+            df1 = filter_finals_only_event(df, selected_event)
+            df2 = filter_relays_as_individual_swim_event(df, selected_event)
+            df = pd.concat([df1, df2])
         all_meets_selected = True
     return df, seeds, all_meets_selected
 
 
 def filter_finals_only_event(df, selected_event):
     df = df[df['Event'] == selected_event]
+    return df
+
+
+def filter_relay_splits(df, selected_event):
+    df_temp = df.drop(df.index)
+    for i in range(len(relay_events[selected_event])):
+        this_event = relay_events[selected_event][i]['Event']
+        this_position = relay_events[selected_event][i]['relay_position']
+        df1 = df[df['Event'].isin(this_event)]
+        df1 = df1[df1['relay_position'].isin(this_position)]
+        df_temp = pd.concat([df_temp, df1])
+    df = df_temp
     return df
 
 
@@ -269,14 +366,55 @@ def filter_relays_as_individual_swim_event(df, selected_event):
 # Create dictionaries for drop-down menus
 
 
-state_events = [{'label': '200 Free', 'value': '200 Yard Freestyle'},
-                {'label': '200 IM', 'value': '200 Yard IM'},
-                {'label': '50 Free', 'value': '50 Yard Freestyle'},
-                {'label': '100 Fly', 'value': '100 Yard Butterfly'},
-                {'label': '100 Free', 'value': '100 Yard Freestyle'},
-                {'label': '500 Free', 'value': '500 Yard Freestyle'},
-                {'label': '100 Back', 'value': '100 Yard Backstroke'},
-                {'label': '100 Breast', 'value': '100 Yard Breaststroke'}, ]
+all_events = [{'label': '200 Free', 'value': '200 Yard Freestyle'},
+              {'label': '200 IM', 'value': '200 Yard IM'},
+              {'label': '50 Free', 'value': '50 Yard Freestyle'},
+              {'label': '100 Fly', 'value': '100 Yard Butterfly'},
+              {'label': '100 Free', 'value': '100 Yard Freestyle'},
+              {'label': '500 Free', 'value': '500 Yard Freestyle'},
+              {'label': '100 Back', 'value': '100 Yard Backstroke'},
+              {'label': '100 Breast', 'value': '100 Yard Breaststroke'},
+              {'label': 'Medley Relay - 50 Back split',
+               'value': '200 Yard Medley Relay - Backstroke Split'},
+              {'label': 'Medley Relay - 50 Breast split',
+               'value': '200 Yard Medley Relay - Breaststroke Split'},
+              {'label': 'Medley Relay - 50 Fly split',
+               'value': '200 Yard Medley Relay - Butterfly Split'},
+              {'label': 'Relay - 50 Free split',
+               'value': '200 Relay - Freestyle Split'},
+              {'label': 'Relay - 100 Free split',
+               'value': '400 Relay - Freestyle Split'},
+              {'label': '200 Medley Relay - Team', 'value': '200 Yard Medley Relay'},
+              {'label': '200 Free Relay - Team', 'value': '200 Yard Freestyle Relay'},
+              {'label': '400 Free Relay - Team', 'value': '400 Yard Freestyle Relay'}]
+
+individual_state_events = [{'label': '200 Free', 'value': '200 Yard Freestyle'},
+                           {'label': '200 IM', 'value': '200 Yard IM'},
+                           {'label': '50 Free', 'value': '50 Yard Freestyle'},
+                           {'label': '100 Fly', 'value': '100 Yard Butterfly'},
+                           {'label': '100 Free', 'value': '100 Yard Freestyle'},
+                           {'label': '500 Free', 'value': '500 Yard Freestyle'},
+                           {'label': '100 Back', 'value': '100 Yard Backstroke'},
+                           {'label': '100 Breast', 'value': '100 Yard Breaststroke'}, ]
+
+team_relays = {'200 Yard Medley Relay': '200 Yard Medley Relay',
+              '200 Yard Freestyle Relay': '200 Yard Freestyle Relay',
+              '400 Yard Freestyle Relay': '400 Yard Freestyle Relay'}
+
+relay_events = {'200 Yard Medley Relay - Backstroke Split':
+                    [{'Event': ['200 Yard Medley Relay'], 'relay_position': ['1.0']}],
+                '200 Yard Medley Relay - Breaststroke Split':
+                    [{'Event': ['200 Yard Medley Relay'], 'relay_position': ['2.0']}],
+                '200 Yard Medley Relay - Butterfly Split':
+                    [{'Event': ['200 Yard Medley Relay'], 'relay_position': ['3.0']}],
+                '200 Relay - Freestyle Split':
+                    [{'Event': ['200 Yard Freestyle Relay'],
+                      'relay_position': ['2.0', '3.0', '4.0']},
+                     {'Event': ['200 Yard Medley Relay'],
+                      'relay_position': ['4.0']}, ],
+                '400 Relay - Freestyle Split':
+                    [{'Event': ['400 Yard Freestyle Relay'],
+                      'relay_position': ['2.0', '3.0', '4.0']}, ]}
 
 gender = [{'label': 'M', 'value': 'M'},
           {'label': 'F', 'value': 'W'}]
@@ -306,12 +444,20 @@ for high_school in unique_high_schools:
     high_schools.append({'label': high_school, 'value': high_school})
 
 individual_events = []
-for event in state_events:
+for event in individual_state_events:
     individual_events.append(list(event.values())[1])
 
 df_names = df_state[df_state['Event'].isin(individual_events)]
-unique_swimmer_names = df_names.Swimmer.unique()
+unique_swimmer_names_1 = df_names.Swimmer.unique()
+relay_positions = ['1.0', '2.0', '3.0', '4.0']
+df_names = df_state[((df_state['Event'] == '200 Yard Medley Relay')
+                     | (df_state['Event'] == '200 Yard Freestyle Relay')
+                     | (df_state['Event'] == '400 Yard Freestyle Relay'))
+                    & (df_state['relay_position'].isin(relay_positions))]
+unique_swimmer_names_2 = df_names.Swimmer.unique()
+unique_swimmer_names = np.concatenate((unique_swimmer_names_1, unique_swimmer_names_2), axis=0)
 unique_swimmer_names.sort()
+unique_swimmer_names = np.unique(unique_swimmer_names)
 swimmer_names = []
 for name in unique_swimmer_names:
     swimmer_names.append({'label': name, 'value': name})
@@ -329,7 +475,7 @@ app.layout = html.Div([
                     {'label': 'Events - Overview', 'value': 1},
                     {'label': 'Reports by High School', 'value': 2},
                     {'label': 'Reports by Swimmer', 'value': 3},
-                    {'label': 'Top Relay Splits', 'value': 4}
+                    {'label': 'State Champions', 'value': 4}
                 ],
                 value=1,
                 id='tabs',
@@ -366,7 +512,7 @@ def generate_figure(df, seeds, y_axis_min, y_axis_max, selected_event,
             # Spline Graph for 1st place finisher in the event
             go.Scatter(
                 x=np.arange(year_range[0], year_range[1]+1, 1),
-                y=generate_y_data(df, 0),
+                y=generate_y_data(df, 0, year_range),
                 text=generate_hover_text(df, 0, all_classes_selected, all_meets_selected),
                 mode='lines+markers',
                 name=generate_legend_name(0, all_classes_selected, selected_class, all_meets_selected),
@@ -377,7 +523,7 @@ def generate_figure(df, seeds, y_axis_min, y_axis_max, selected_event,
             # Spline Graph for 8th place finisher in the event
             go.Scatter(
                 x=np.arange(year_range[0], year_range[1] + 1, 1),
-                y=generate_y_data(df, 7),
+                y=generate_y_data(df, 7, year_range),
                 text=generate_hover_text(df, 7, all_classes_selected, all_meets_selected),
                 mode='lines+markers',
                 name=generate_legend_name(7, all_classes_selected, selected_class, all_meets_selected),
@@ -388,7 +534,7 @@ def generate_figure(df, seeds, y_axis_min, y_axis_max, selected_event,
             # Spline Graph for 16th place finisher in the event
             go.Scatter(
                 x=np.arange(year_range[0], year_range[1] + 1, 1),
-                y=generate_y_data(df, 15),
+                y=generate_y_data(df, 15, year_range),
                 text=generate_hover_text(df, 15, all_classes_selected, all_meets_selected),
                 mode='lines+markers',
                 name=generate_legend_name(15, all_classes_selected, selected_class, all_meets_selected),
@@ -538,16 +684,25 @@ def update_highschool_table(selected_event, selected_gender, selected_highschool
     filtered_df_state = df_state[df_state['School'] == selected_highschool]
     filtered_df_state = filter_gender(filtered_df_state, selected_gender)
     filtered_df_state = filter_missing_times(filtered_df_state)
-    filtered_df_state = pd.concat([filter_finals_only_event(filtered_df_state, selected_event),
-                                   filter_relays_as_individual_swim_event(filtered_df_state, selected_event)])
+    df_temp = filtered_df_state.drop(filtered_df_state.index)
+    filtered_df_state, filtered_df_seeds, all_meets_selected = \
+        filter_meets_and_event(filtered_df_state, df_temp, selected_event, finals_or_overall[1]['value'])
+    if ind_relay_lookup(selected_event):
+        for index, row in filtered_df_state.iterrows():
+            if row['relay_position'] == '1.0':
+                if 'Relay' in row['Event']:
+                    filtered_df_state.loc[index, 'Event'] = row['Event'] + ' (lead-off)'
+    elif (selected_event == '100 Yard Freestyle') | (selected_event == '50 Yard Freestyle'):
+        for index, row in filtered_df_state.iterrows():
+            if row['relay_position'] == '1.0':
+                if 'Relay' in row['Event']:
+                    filtered_df_state.loc[index, 'Event'] = row['Event'] + ' (lead-off)'
 
     filtered_df_state = filtered_df_state.sort_values(['time_obj', 'Swimmer'])\
         .drop_duplicates('Swimmer')
-    filtered_df_state = filtered_df_state[['Swimmer', 'Event', 'Meet', 'time_obj', 'swim_year']]
     filtered_df_state['time_obj'] = filtered_df_state['time_obj']\
         .apply(lambda x: x.strftime('%M:%S.%f')[:-4])
-    filtered_df_state['Event'] = filtered_df_state['Event']\
-        .apply(lambda x: x + ' (lead-off)' if 'Relay' in x else x)
+    filtered_df_state = filtered_df_state[['Swimmer', 'Event', 'Meet', 'time_obj', 'swim_year']]
     filtered_df_state = filtered_df_state.rename(columns={'swim_year': 'Date',
                                                           'time_obj': 'Best Time'})
     filtered_df_state.insert(0, 'Rank', range(1, len(filtered_df_state)+1))
@@ -587,10 +742,10 @@ def display_tab_content(value):
                 html.Label('Event'),
                 dcc.Dropdown(
                     id='event-selection',
-                    options=state_events,
+                    options=all_events,
                     value='200 Yard Freestyle'
                     )],
-                style=dict(width='150px', display='inline-block', padding='5px', zIndex=1002),
+                style=dict(width='250px', display='inline-block', padding='5px', zIndex=1002),
             ),
             html.Div([
                 html.Label('Gender'),
@@ -645,9 +800,9 @@ def display_tab_content(value):
                     html.Label('Event'),
                     dcc.Dropdown(
                         id='event-selection',
-                        options=state_events,
+                        options=all_events,
                         value='200 Yard Freestyle')],
-                    style=dict(width='150px', display='inline-block', padding='5px', zIndex=1002),
+                    style=dict(width='250px', display='inline-block', padding='5px', zIndex=1002),
                 ),
                 html.Div([
                     html.Label('Gender'),
