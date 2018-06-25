@@ -78,30 +78,32 @@ df_seeds['time_obj'] = lookup(df_seeds['time_obj'])
 #     Helper functions for graph variables      #
 #################################################
 
-def generate_hover_text(df, place, all_classes_selected, all_meets_selected):
-    min_y_counts = get_finals_y_count(df)
-    i = 0
+def generate_hover_text(df, place, all_classes_selected, all_meets_selected, year_range):
+    y_counts = get_finals_y_counts(df)
+    i = year_range[0]
     hover_text = pd.Series()
-    for y_count in min_y_counts:
+    for y_count in y_counts:
         if place > y_count:
-            swimmer_name, swimmer_time, class_text, meet_name, event_name, relay_position = \
-                get_nth_result(df, y_count, i)
+            swimmer_name, swimmer_time, class_text, meet_name, event_name, \
+                school_name, relay_position = get_nth_result(df, y_count, i)
             append_text = swimmer_name + ' ' + swimmer_time + ' ' + \
                 str([class_text if all_classes_selected else ''][0]) + \
                 str([': ' + meet_name if all_meets_selected else ''][0]) + \
                 str([' ' + event_name if all_meets_selected else ''][0]) + \
                 str([' (lead-off)' if all_meets_selected & (relay_position == '1.0') &
-                    ('Relay' in event_name) else ''][0])
+                    ('Relay' in event_name) else ''][0]) + \
+                str([' - ' + school_name if team_relay_lookup(event_name) else ''][0])
             hover_text.at[i] = append_text
         else:
-            swimmer_name, swimmer_time, class_text, meet_name, event_name, relay_position = \
-                get_nth_result(df, place, i)
+            swimmer_name, swimmer_time, class_text, meet_name, event_name, \
+                school_name, relay_position = get_nth_result(df, place, i)
             append_text = swimmer_name + ' ' + swimmer_time + ' ' + \
                 str([class_text if all_classes_selected else ''][0]) + \
                 str([': ' + meet_name if all_meets_selected else ''][0]) + \
                 str([' ' + event_name if all_meets_selected else ''][0]) + \
                 str([' (lead-off)' if all_meets_selected & (relay_position == '1.0') &
-                    ('Relay' in event_name) else ''][0])
+                    ('Relay' in event_name) else ''][0]) + \
+                str([' - ' + school_name if team_relay_lookup(event_name) else ''][0])
             hover_text.at[i] = append_text
         i += 1
     return hover_text
@@ -111,23 +113,31 @@ def get_nth_result(df, place, i):
     names = get_nth_names(df, place)
     times = get_nth_times(df, place)
     classes_text = get_nth_class(df, place)
-    meet_names = get_meet_name(df, place)
-    event_names = get_event_name(df, place)
-    relay_positions = get_relay_position(df, place)
-    times = [time.strftime('%M:%S.%f')[:-4] for time in times]
-    swimmer_name = names.iloc[i]
-    swimmer_time = times[i]
-    class_text = classes_text.iloc[i]
-    meet_name = meet_names.iloc[i]
-    event_name = event_names.iloc[i]
-    relay_position = relay_positions.iloc[i]
-    return swimmer_name, swimmer_time, class_text, meet_name, event_name, relay_position
+    meet_names = get_nth_meet_names(df, place)
+    event_names = get_nth_event_names(df, place)
+    school_names = get_nth_school_names(df, place)
+    nth_relay_positions = get_relay_position(df, place)
+    times = times.apply(lambda x: x.strftime('%M:%S.%f')[:-4])
+    swimmer_name = names.loc[i]
+    swimmer_time = times.loc[i]
+    class_text = classes_text.loc[i]
+    meet_name = meet_names.loc[i]
+    event_name = event_names.loc[i]
+    relay_position = nth_relay_positions.loc[i]
+    school_name = school_names.loc[i]
+    return swimmer_name, swimmer_time, class_text, meet_name, event_name, school_name, relay_position
 
 
 def get_nth_names(df, place):
     names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
         .groupby('swim_year')['Swimmer'].nth(place)
     return names
+
+
+def get_nth_school_names(df, place):
+    school_names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')['School'].nth(place)
+    return school_names
 
 
 def get_nth_times(df, place):
@@ -142,62 +152,65 @@ def get_nth_class(df, place):
     return the_classes
 
 
-def get_meet_name(df, place):
+def get_nth_meet_names(df, place):
     meet_names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
         .groupby('swim_year')['Meet'].nth(place)
     return meet_names
 
 
-def get_event_name(df, place):
+def get_nth_event_names(df, place):
     event_names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
         .groupby('swim_year')['Event'].nth(place)
     return event_names
 
 
 def get_relay_position(df, place):
-    relay_positions = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+    nth_relay_positions = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
         .groupby('swim_year')['relay_position'].nth(place)
-    return relay_positions
+    return nth_relay_positions
 
 
-def get_swim_time(df, place):
+def get_nth_swim_times(df, place):
     swim_times = df.sort_values('time_obj').groupby('swim_year').time_obj.nth(place)
     return swim_times
 
 
+def get_last_swim_times(df):
+    swim_times = df.sort_values('time_obj').groupby('swim_year').time_obj.last()
+    return swim_times
+
+
 def generate_y_data(df, place, year_range):
-    min_y_counts = get_finals_y_count(df)
+    y_counts = get_finals_y_counts(df)
     y_data = df.sort_values('time_obj').groupby('swim_year').time_obj.nth(0)
     i = year_range[0]
-    j = 0
-    for y_count in min_y_counts:
+    for y_count in y_counts:
         if place > y_count:
-            swim_times = get_swim_time(df, y_count)
-            swim_time = swim_times.iloc[j]
+            swim_times = get_last_swim_times(df)
+            swim_time = swim_times.loc[i]
             y_data.at[i] = swim_time
         else:
-            swim_times = get_swim_time(df, place)
-            swim_time = swim_times.iloc[j]
+            swim_times = get_nth_swim_times(df, place)
+            swim_time = swim_times.loc[i]
             y_data.at[i] = swim_time
         i += 1
-        j += 1
     return y_data
 
 
-def get_finals_y_count(df):
-    min_y_counts = list(df.sort_values('time_obj').groupby(
+def get_finals_y_counts(df):
+    y_counts = list(df.sort_values('time_obj').groupby(
         'swim_year').time_obj.count())
-    for i in range(len(min_y_counts)):
-        min_y_counts[i] = min_y_counts[i] - 1
-    return min_y_counts
+    for i in range(len(y_counts)):
+        y_counts[i] = y_counts[i] - 1
+    return y_counts
 
 
 def generate_y_axis_max(df, seeds, all_classes_selected, selected_event):
-    min_y_counts = get_finals_y_count(df)
+    y_counts = list(set(get_finals_y_counts(df)))
     y_axis_max = df.sort_values('time_obj')\
         .groupby('swim_year').time_obj.nth(15).max()
     seed_max = seeds.time_obj.max()
-    for y_count in min_y_counts:
+    for y_count in y_counts:
         if 15 > y_count:
             if all_classes_selected:
                 temp_y = df.sort_values('time_obj').groupby('swim_year')\
@@ -472,8 +485,8 @@ app.layout = html.Div([
         html.Div(
             dcc.Tabs(
                 tabs=[
-                    {'label': 'Events - Overview', 'value': 1},
-                    {'label': 'Reports by High School', 'value': 2},
+                    {'label': 'State Results', 'value': 1},
+                    {'label': 'High School Results', 'value': 2},
                     {'label': 'Reports by Swimmer', 'value': 3},
                     {'label': 'State Champions', 'value': 4}
                 ],
@@ -513,7 +526,7 @@ def generate_figure(df, seeds, y_axis_min, y_axis_max, selected_event,
             go.Scatter(
                 x=np.arange(year_range[0], year_range[1]+1, 1),
                 y=generate_y_data(df, 0, year_range),
-                text=generate_hover_text(df, 0, all_classes_selected, all_meets_selected),
+                text=generate_hover_text(df, 0, all_classes_selected, all_meets_selected, year_range),
                 mode='lines+markers',
                 name=generate_legend_name(0, all_classes_selected, selected_class, all_meets_selected),
                 hoverinfo='text',
@@ -524,7 +537,7 @@ def generate_figure(df, seeds, y_axis_min, y_axis_max, selected_event,
             go.Scatter(
                 x=np.arange(year_range[0], year_range[1] + 1, 1),
                 y=generate_y_data(df, 7, year_range),
-                text=generate_hover_text(df, 7, all_classes_selected, all_meets_selected),
+                text=generate_hover_text(df, 7, all_classes_selected, all_meets_selected, year_range),
                 mode='lines+markers',
                 name=generate_legend_name(7, all_classes_selected, selected_class, all_meets_selected),
                 hoverinfo='text',
@@ -535,7 +548,7 @@ def generate_figure(df, seeds, y_axis_min, y_axis_max, selected_event,
             go.Scatter(
                 x=np.arange(year_range[0], year_range[1] + 1, 1),
                 y=generate_y_data(df, 15, year_range),
-                text=generate_hover_text(df, 15, all_classes_selected, all_meets_selected),
+                text=generate_hover_text(df, 15, all_classes_selected, all_meets_selected, year_range),
                 mode='lines+markers',
                 name=generate_legend_name(15, all_classes_selected, selected_class, all_meets_selected),
                 hoverinfo='text',
