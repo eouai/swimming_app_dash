@@ -486,7 +486,7 @@ app.layout = html.Div([
             dcc.Tabs(
                 tabs=[
                     {'label': 'State Results', 'value': 1},
-                    {'label': 'High School Results', 'value': 2},
+                    {'label': 'High School Top Times', 'value': 2},
                     {'label': 'Reports by Swimmer', 'value': 3},
                     {'label': 'State Champions', 'value': 4}
                 ],
