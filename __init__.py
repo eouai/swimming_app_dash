@@ -110,13 +110,13 @@ def generate_hover_text(df, place, all_classes_selected, all_meets_selected, yea
 
 
 def get_nth_result(df, place, i):
-    names = get_nth_names(df, place)
-    times = get_nth_times(df, place)
-    classes_text = get_nth_class(df, place)
-    meet_names = get_nth_meet_names(df, place)
-    event_names = get_nth_event_names(df, place)
-    school_names = get_nth_school_names(df, place)
-    nth_relay_positions = get_relay_position(df, place)
+    names = get_nth_element(df, place, element_name='Swimmer')
+    times = get_nth_element(df, place, element_name='time_obj')
+    classes_text = get_nth_element(df, place, element_name='Class')
+    meet_names = get_nth_element(df, place, element_name='Meet')
+    event_names = get_nth_element(df, place, element_name='Event')
+    school_names = get_nth_element(df, place, element_name='School')
+    nth_relay_positions = get_nth_element(df, place, element_name='relay_position')
     times = times.apply(lambda x: x.strftime('%M:%S.%f')[:-4])
     swimmer_name = names.loc[i]
     swimmer_time = times.loc[i]
@@ -128,51 +128,10 @@ def get_nth_result(df, place, i):
     return swimmer_name, swimmer_time, class_text, meet_name, event_name, school_name, relay_position
 
 
-def get_nth_names(df, place):
-    names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')['Swimmer'].nth(place)
-    return names
-
-
-def get_nth_school_names(df, place):
-    school_names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')['School'].nth(place)
-    return school_names
-
-
-def get_nth_times(df, place):
-    times = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')['time_obj'].nth(place)
-    return times
-
-
-def get_nth_class(df, place):
-    the_classes = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')['Class'].nth(place)
-    return the_classes
-
-
-def get_nth_meet_names(df, place):
-    meet_names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')['Meet'].nth(place)
-    return meet_names
-
-
-def get_nth_event_names(df, place):
-    event_names = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')['Event'].nth(place)
-    return event_names
-
-
-def get_relay_position(df, place):
-    nth_relay_positions = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
-        .groupby('swim_year')['relay_position'].nth(place)
-    return nth_relay_positions
-
-
-def get_nth_swim_times(df, place):
-    swim_times = df.sort_values('time_obj').groupby('swim_year').time_obj.nth(place)
-    return swim_times
+def get_nth_element(df, place, element_name):
+    element = df.sort_values(['swim_year', 'time_obj'], ascending=[False, True]) \
+        .groupby('swim_year')[element_name].nth(place)
+    return element
 
 
 def get_last_swim_times(df):
@@ -190,7 +149,7 @@ def generate_y_data(df, place, year_range):
             swim_time = swim_times.loc[i]
             y_data.at[i] = swim_time
         else:
-            swim_times = get_nth_swim_times(df, place)
+            swim_times = get_nth_element(df, place, element_name='time_obj')
             swim_time = swim_times.loc[i]
             y_data.at[i] = swim_time
         i += 1
