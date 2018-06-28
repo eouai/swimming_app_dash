@@ -798,6 +798,8 @@
 "Snow Canyon High School-UT 'A'": "Snow Canyon High School",
 "Snow Canyon-AK": "Snow Canyon High School",
 "Snow Canyon-UT": "Snow Canyon High School",
+"South": "South High School",
+"South High School": "South High School",
 "South Sevier High School": "South Sevier High School",
 "South Summit": "South Summit High School",
 "South Summit High S A": "South Summit High School",
