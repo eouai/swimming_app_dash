@@ -4,8 +4,7 @@ seeds = pd.read_csv('data/state_meet_seeds_and_finals_only.csv')
 
 seeds = seeds[seeds['Meet'] == 'State Seed']
 seeds = seeds.sort_values(['date_year', 'time_obj'], ascending=[False, True])\
-    .groupby(['Gender', 'Event', 'date_year', 'Class'])['Gender', 'Event', 'date_year',
-                                                        'Class', 'time_obj'].last()
+    .groupby(['Gender', 'Event', 'date_year', 'Class'])['time_obj'].last()
 seeds = seeds.reset_index()
 
 

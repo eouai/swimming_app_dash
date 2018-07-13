@@ -3,7 +3,6 @@
 import pandas as pd
 import re
 import numpy as np
-from fuzzywuzzy import fuzz
 import os
 
 #os.chdir('/var/www/FlaskApp/FlaskApp')
@@ -24,6 +23,7 @@ def get_high_schools(f):
     for line in f:
         temp = line.replace('"', '')
         temp = temp.replace('{', '')
+        temp = temp.replace('}', '')
         temp = temp.replace(',', '')
         k, v = temp.strip().split(':')
         mapping[k.strip()] = v.strip()
@@ -182,25 +182,6 @@ def process_times(df):
     df['date_year'] = df['date_time'].map(lambda x: x.year)
     df['swim_year'] = df['date_time'].apply(lambda x: get_swim_year(x))
     df['grad_year'] = df.apply(get_grad_year, axis=1)
-    return df
-
-
-def fuzzy_matching(df):
-    df = fuzzy_column(df)
-    fuzzy_names = list(df['fuzzy'].unique())
-    for name in fuzzy_names:
-        for compare_name in fuzzy_names:
-            the_ratio = fuzz.ratio(compare_name, name)
-            if (the_ratio > .95) & (the_ratio < 1):
-                print('compare_name: {}'.format(compare_name))
-                print('name: {}'.format(name))
-                print('ratio: {}'.format(the_ratio))
-    return df
-
-
-def fuzzy_column(df):
-    df['fuzzy'] = df['Swimmer'] + ' ' + df['School']\
-        .apply(lambda x: x.replace(' High School', '')) + ' ' + df['grad_year']
     return df
 
 

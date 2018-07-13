@@ -1,6 +1,7 @@
 import pandas as pd
-import numpy as np
-from datetime import datetime
+
+# import numpy as np
+# from datetime import datetime
 
 dtypes = {'Unnamed: 0': 'int', '100 Split': 'str', '150 Split': 'str', '200 Split': 'str',
           '250 Split': 'str', '300 Split': 'str', '350 Split': 'str', '400 Split': 'str',
@@ -12,36 +13,58 @@ dtypes = {'Unnamed: 0': 'int', '100 Split': 'str', '150 Split': 'str', '200 Spli
           'date_year': 'int', 'swim_year': 'int'}
 df_state = pd.read_csv('data/swimming_data_state_processed.csv', dtype=dtypes)
 df_state['Swimmer'] = df_state.Swimmer.str.strip()
-
-swimmer_names = df_state[['Swimmer', 'School', 'Gender', 'swim_year']]\
-    .drop_duplicates(['Swimmer', 'School'])
-swimmer_names = swimmer_names.sort_values('Swimmer')
-swimmer_names['Swimmer'] = swimmer_names['Swimmer'].str.strip()
-# Remove entries with grouped relay names
-swimmer_names['char_count'] = swimmer_names['Swimmer'].apply(lambda x: x.count(','))
-swimmer_names = swimmer_names[swimmer_names['char_count'] < 2]
-swimmer_names = swimmer_names.drop('char_count', axis=1)
-# swimmer_names['Date'] = swimmer_names['Date'].apply(lambda x: datetime.strptime(x, '%m/%d/%Y').year)
-swimmer_names['n2'] = swimmer_names.Swimmer.shift(-1)
-swimmer_names['s2'] = swimmer_names.School.shift(-1)
-swimmer_names['g2'] = swimmer_names.Gender.shift(-1)
-swimmer_names['d2'] = swimmer_names.swim_year.shift(-1)
-swimmer_names = swimmer_names.drop(swimmer_names.index[len(swimmer_names)-1])
-
-name_lookup = {}
+df_state['relay_names'] = df_state.Swimmer.apply(lambda x: x.count(',') > 1)
 
 
-def check_name(n1, n2, g1, g2, y1, y2, s1, s2):
-    if (abs(y1 - y2) < 5) & (g1 == g2) & (s1 == s2) & (n1 == n2[:-2]):
-        name_lookup[n1 + s1] = n2
+def structure_swimmer_comparison(df, col, sort_order):
+    df = df[[col, 'School', 'Gender', 'swim_year']] \
+        .drop_duplicates([col, 'School'])
+    df[col+'_lower'] = df[col].str.strip().str.lower()
+    df = df.sort_values(sort_order)
+    # Remove entries with grouped relay names
+    df['char_count'] = df[col].apply(lambda x: x.count(','))
+    df = df[df['char_count'] < 2]
+    df = df.drop('char_count', axis=1)
+    df['n2'] = df[col].shift(-1)
+    df['s2'] = df.School.shift(-1)
+    df['g2'] = df.Gender.shift(-1)
+    df['d2'] = df.swim_year.shift(-1)
+    return df
+
+
+def compile_name_dict(n1, n2, g1, g2, y1, y2, s1, s2, trunc):
+    if pd.isnull(n2):
+        n2, g2, y2, s2 = n1, g1, y1, s1
+    if (abs(y1 - y2) < 5) & (g1 == g2) & (s1 == s2) & ((n1.lower() == n2[:-trunc].lower())
+                                                       or (n2.lower() == n1[:-trunc].lower())):
+        # Found a truncated version of a name
+        if n1 == n2[:-trunc]:
+            # No case mismatch, trunc version is exact match, update to longer name version
+            name_lookup[n1 + s1] = n2
+        elif n2.lower() == n1[:-trunc].lower():
+            # Trunc version has case mismatch, n1 is the longer string
+            # update to longer name (sorted descending, so higher case will be n1)
+            name_lookup[n1 + s1] = n1
+            name_lookup[n2 + s1] = n1
+        else:
+            # Trunc version has case mismatch, n2 is the longer string
+            name_lookup[n1 + s1] = n2
+            name_lookup[n2 + s1] = n2
+    elif (abs(y1 - y2) < 5) & (g1 == g2) & (s1 == s2) & (n1.lower() == n2.lower()):
+        # Found a case mismatch, no trunc occurring on an otherwise matched name
+        if [n1 + s1][0] in name_lookup.keys():
+            pass
+        else:
+            name_lookup[n1 + s1] = n1
+        if [n2 + s1][0] in name_lookup.keys():
+            pass
+        else:
+            name_lookup[n2 + s1] = n1
     else:
-        name_lookup[n1 + s1] = n1
-    if 'deVita' in n1:
-        print(n1)
-        print(n2)
-    for key in name_lookup.keys():
-        if 'deVita' in key:
-            print(key)
+        if [n1 + s1][0] in name_lookup.keys():
+            pass
+        else:
+            name_lookup[n1 + s1] = n1
 
 
 def update_name(name, relay, lookup_value):
@@ -49,12 +72,63 @@ def update_name(name, relay, lookup_value):
     return the_name
 
 
-swimmer_names.apply(lambda row: check_name(row['Swimmer'], row['n2'],
-                                           row['Gender'], row['g2'],
-                                           row['swim_year'], row['d2'],
-                                           row['School'], row['s2']), axis=1)
+def write_clean_name(df, col):
+    df['lookup_value'] = df[col] + df.School
+    df['clean_name'] = df.apply(lambda row: update_name(row[col], row['relay_names'],
+                                                        row['lookup_value']), axis=1)
+    return df
 
-df_state['lookup_value'] = df_state.Swimmer + df_state.School
-df_state['relay_names'] = df_state.Swimmer.apply(lambda x: x.count(',') > 1)
-df_state['clean_name'] = df_state.apply(lambda row: update_name(row['Swimmer'], row['relay_names'],
-                                        row['lookup_value']), axis=1)
+
+col = 'Swimmer'
+trunc_len = 1
+
+for i in range(5):
+    sort_order = [col + '_lower', 'School']
+    for j in range(2):
+        name_lookup = {}
+        swimmer_names = structure_swimmer_comparison(df_state, col, sort_order)
+        swimmer_names.apply(lambda row: compile_name_dict(row[col], row['n2'], row['Gender'], row['g2'],
+                                                          row['swim_year'], row['d2'], row['School'],
+                                                          row['s2'], trunc_len), axis=1)
+        df_state = write_clean_name(df_state, col)
+        sort_order = list(reversed(sort_order))
+    col = 'clean_name'  # first time through check Swimmer name col, after that use the updated clean_name col
+
+trunc_len = 2
+sort_order = [col + '_lower', 'School']
+
+for i in range(3):
+    for j in range(2):
+        name_lookup = {}
+        swimmer_names = structure_swimmer_comparison(df_state, col, sort_order)
+        swimmer_names.apply(lambda row: compile_name_dict(row[col], row['n2'], row['Gender'], row['g2'],
+                                                          row['swim_year'], row['d2'], row['School'],
+                                                          row['s2'], trunc_len), axis=1)
+        df_state = write_clean_name(df_state, col)
+        sort_order = list(reversed(sort_order))
+
+trunc_len = 3
+
+for i in range(2):
+    for j in range(2):
+        name_lookup = {}
+        swimmer_names = structure_swimmer_comparison(df_state, col, sort_order)
+        swimmer_names.apply(lambda row: compile_name_dict(row[col], row['n2'], row['Gender'], row['g2'],
+                                                          row['swim_year'], row['d2'], row['School'],
+                                                          row['s2'], trunc_len), axis=1)
+        df_state = write_clean_name(df_state, col)
+        sort_order = list(reversed(sort_order))
+
+trunc_len = 4
+
+for i in range(1):
+    for j in range(2):
+        name_lookup = {}
+        swimmer_names = structure_swimmer_comparison(df_state, col, sort_order)
+        swimmer_names.apply(lambda row: compile_name_dict(row[col], row['n2'], row['Gender'], row['g2'],
+                                                          row['swim_year'], row['d2'], row['School'],
+                                                          row['s2'], trunc_len), axis=1)
+        df_state = write_clean_name(df_state, col)
+        sort_order = list(reversed(sort_order))
+
+df_state.to_csv('data/name_cleanup3.csv')
