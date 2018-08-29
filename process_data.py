@@ -198,5 +198,5 @@ high_school_mapping = get_high_schools(f_schools)
 df_state = cleanup_state(df_state_raw)
 
 # df_SV.to_csv('data/swimming_data_processed.csv')
-df_state.insert(0,'ID', range(0, 0 + len(df_state)))
+df_state.insert(0, 'ID', range(0, 0 + len(df_state)))
 df_state.to_csv('data/swimming_data_state_processed.csv', index=False)
