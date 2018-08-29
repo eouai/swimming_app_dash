@@ -3,18 +3,18 @@
 import pandas as pd
 import re
 import numpy as np
-import os
 
-#os.chdir('/var/www/FlaskApp/FlaskApp')
+# import os
+# os.chdir('/var/www/FlaskApp/FlaskApp')
 
-year_mapping = {'09':'FR', '10':'SO', '11':'JR', '12':'SR'}
+year_mapping = {'09': 'FR', '10': 'SO', '11': 'JR', '12': 'SR'}
 gender_mapping = {'Boys': 'M', 'Men': 'M', 'Men ': 'M', 'Male': 'M', 'Male ': 'M',
                   'Women': 'W', 'Women ': 'W', 'Female': 'W', 'Female ': 'W',
-                  'F': 'W', 'Girls': 'W',
-                  'M': 'M', 'W': 'W'}
+                  'F': 'W', 'Girls': 'W', 'M': 'M', 'W': 'W'}
 # Swimmers that have no school year recorded - assuming on average they're juniors
 # Most of these swim results are from state meet - less likely for FR to qualify for State
 grad_mapping = {'FR': 3, 'SO': 2, 'JR': 1, 'SR': 0, 'NA': 1}
+dtypes = {'Points': 'str', 'Previous record': 'str'}
 
 
 # Define CSV cleanup and processing methods
@@ -30,12 +30,6 @@ def get_high_schools(f):
     return mapping
 
 
-def cleanup_SV(df):
-    df['Year'] = pd.DatetimeIndex(df['Date']).year
-    df = df[['Event', 'Time Full', 'Year', 'Swimmer', 'Gender']]
-    return df
-
-
 def cleanup_state(df):
     df = process_place(df)
     df = process_school_year(df)
@@ -43,15 +37,19 @@ def cleanup_state(df):
     df = reshape_seed(df)
     df = process_times(df)
     df = process_school_name(df)
+    df = label_relays(df)
     # df = fuzzy_matching(df)
     return df
 
 
+def label_relays(df):
+    df['Relay'] = df['Event'].apply(lambda x: True if 'Relay' in x else False)
+    return df
+
+
 def process_school_name(df):
-    df['School'] = df['School'].apply(lambda x: x.strip())
-    df['School'] = df['School'].apply(lambda x: x.strip(','))
-    df['School'] = df['School'].apply(
-        lambda x: high_school_mapping[x])
+    df['School'] = df['School'].apply(lambda x: x.replace(',', '').strip())
+    df['School'] = df['School'].apply(lambda x: high_school_mapping[x])
     return df
 
 
@@ -64,24 +62,27 @@ def process_place(df):
 
 def process_school_year(df):
     # Standardize school year formatting
-    # Remove school year when it appears in school name col 'School'
+    # Replace any jumbled or garbage entries with 'NA'
+    school_years = list(year_mapping.keys()) + list(year_mapping.values())
     df['Year'] = df['Year'].fillna('NA')
-    df['Year'] = df['Year'].apply(lambda x: '09' if x == '9' else x)
-    school_years = [' FR ', ' SO ', ' JR ', ' SR ', ' 09 ', ' 10 ', ' 11 ', ' 12 ']
+    df['Year'] = df['Year'].apply(lambda x: '09' if x.strip() == '9' else x.strip())
     df['Year'] = df['Year'].apply(
-            lambda x: x if any(x == year for year in map(str.strip, school_years)) else 'NA')
+            lambda x: x if any(x == year for year in school_years) else 'NA')
+    df['Year'] = df['Year'].apply(lambda x: year_mapping[x] if x in year_mapping.keys()
+                                  else x)
+    # original data extraction sometimes included student class-year info in the School name
+    # eg 'Some High School SR'.  Remove these extraneous tags
     for index, row in df.iterrows():
         if pd.isnull(row['School']):
             continue
         else:
             school_name = row['School']
             for year in school_years:
-                if year in school_name:
-                    if row['Year'] not in map(str.strip, school_years):
-                        df.loc[index, 'Year'] = year.strip()
-                    df.loc[index, 'School'] = school_name[school_name.find(year) + 4:]
+                year_spaces = ' ' + year + ' '
+                if year == school_name.strip()[-2:] or year_spaces in school_name:
+                    if row['Year'] not in school_years:
+                        df.loc[index, 'Year'] = year
                     break
-    df['Year'].replace(year_mapping, inplace=True)
     return df
 
 
@@ -121,14 +122,14 @@ def reshape_seed(df):
     df['Final Time'] = df['Final Time'].fillna(value='')
     df['Seed'] = df['Seed'].fillna(value='')
     df_temp = df[['key', 'Place', 'Swimmer', 'Year', 'School', 'Gender',
-                  'Event', 'Seed', 'Final Time', 'Date', 'Class', 'full_results']]
+                  'Event', 'Seed', 'Final Time', 'Date', 'Class', 'full_results']].copy()
     df_temp['seed_check'] = df_temp['Seed'].apply(lambda x: len(x))
     df_temp = df_temp[df_temp['seed_check'] > 1]
     df_temp = df_temp.drop(columns='seed_check')
     df['Seed'] = ''
     df_temp['Final Time'] = ''
     df_temp['Meet'] = 'State Seed'
-    df_combined = pd.concat([df_temp, df])
+    df_combined = pd.concat([df_temp, df], sort=True)
     final_times = list(df_combined['Final Time'])
     seed_times = list(df_combined['Seed'])
     count = 0
@@ -187,14 +188,15 @@ def process_times(df):
 
 # Read in initial data sets from CSV.
 # df_SV_raw = pd.read_csv('data/swimming_data.csv')
-df_state_raw = pd.read_csv('data/swimming_data_state.csv')
+df_state_raw = pd.read_csv('data/swimming_data_state.csv', dtype=dtypes)
 df_state_raw = df_state_raw[np.isfinite(df_state_raw['key'])]
 
 # Cleanup and process the CSV files
 # df_SV = cleanup_SV(df_SV_raw)
-f = open("high_school_mapping.txt", "r")
-high_school_mapping = get_high_schools(f)
+f_schools = open("high_school_mapping.txt", "r")
+high_school_mapping = get_high_schools(f_schools)
 df_state = cleanup_state(df_state_raw)
 
 # df_SV.to_csv('data/swimming_data_processed.csv')
-df_state.to_csv('data/swimming_data_state_processed.csv')
+df_state.insert(0,'ID',range(0, 0 + len(df_state)))
+df_state.to_csv('data/swimming_data_state_processed.csv', index=False)
