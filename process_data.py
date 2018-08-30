@@ -11,9 +11,8 @@ year_mapping = {'09': 'FR', '10': 'SO', '11': 'JR', '12': 'SR'}
 gender_mapping = {'Boys': 'M', 'Men': 'M', 'Men ': 'M', 'Male': 'M', 'Male ': 'M',
                   'Women': 'W', 'Women ': 'W', 'Female': 'W', 'Female ': 'W',
                   'F': 'W', 'Girls': 'W', 'M': 'M', 'W': 'W'}
-# Swimmers that have no school year recorded - assuming on average they're juniors
-# Most of these swim results are from state meet - less likely for FR to qualify for State
-grad_mapping = {'FR': 3, 'SO': 2, 'JR': 1, 'SR': 0, 'NA': 1}
+
+grad_mapping = {'FR': 3, 'SO': 2, 'JR': 1, 'SR': 0}
 dtypes = {'Points': 'str', 'Previous record': 'str'}
 
 
@@ -39,6 +38,7 @@ def cleanup_state(df):
     df = process_school_name(df)
     df = label_relays(df)
     df = label_team_only(df)
+    df = process_swimmer_name(df)
     # df = fuzzy_matching(df)
     return df
 
@@ -51,6 +51,24 @@ def label_relays(df):
 def label_team_only(df):
     df['Team'] = df['Swimmer'].apply(lambda x: True if x.count(',') > 1 else False)
     return df
+
+
+def process_swimmer_name(df):
+    df['first_name'] = df['Swimmer'].apply(lambda x: '' if x.count(',') > 1 else first_name(x))
+    df['last_name'] = df['Swimmer'].apply(lambda x: '' if x.count(',') > 1 else last_name(x))
+    return df
+
+
+def first_name(name):
+    if len(name.split(',')) == 2:
+        name = name.split(',')[1]
+    else:
+        name = ''
+    return name
+
+
+def last_name(name):
+    return name.split(',')[0]
 
 
 def process_school_name(df):
@@ -119,8 +137,10 @@ def get_swim_year(x):
 
 def get_grad_year(row):
     swim_year = row[29]
-    grad_year = swim_year + grad_mapping[row[20]]
-    grad_year = str(grad_year)
+    if row[20] == 'NA':
+        grad_year = ''
+    else:
+        grad_year = str(swim_year + grad_mapping[row[20]])
     return grad_year
 
 
