@@ -38,12 +38,18 @@ def cleanup_state(df):
     df = process_times(df)
     df = process_school_name(df)
     df = label_relays(df)
+    df = label_team_only(df)
     # df = fuzzy_matching(df)
     return df
 
 
 def label_relays(df):
     df['Relay'] = df['Event'].apply(lambda x: True if 'Relay' in x else False)
+    return df
+
+
+def label_team_only(df):
+    df['Team'] = df['Swimmer'].apply(lambda x: True if x.count(',') > 1 else False)
     return df
 
 
