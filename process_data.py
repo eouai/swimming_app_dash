@@ -155,7 +155,7 @@ def reshape_seed(df):
     df['Seed'] = ''
     df_temp['Final Time'] = ''
     df_temp['Meet'] = 'State Seed'
-    df_combined = pd.concat([df_temp, df], sort=True)
+    df_combined = pd.concat([df_temp, df])
     final_times = list(df_combined['Final Time'])
     seed_times = list(df_combined['Seed'])
     count = 0
