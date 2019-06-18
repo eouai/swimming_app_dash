@@ -73,6 +73,7 @@ def last_name(name):
 
 def process_school_name(df):
     df['School'] = df['School'].apply(lambda x: x.replace(',', '').strip())
+    df['School'] = df['School'].apply(lambda x: x.replace('—', '-'))
     df['School'] = df['School'].apply(lambda x: high_school_mapping[x])
     return df
 
@@ -80,6 +81,7 @@ def process_school_name(df):
 def process_place(df):
     # Fill NA with 0 and convert col to int format
     df['Place'] = df['Place'].fillna(0)
+    df['Place'] = df['Place'].apply(lambda x: 0 if x == "DQ" else x)
     df['Place'] = df['Place'].apply(lambda x: int(x))
     return df
 
